@@ -1,10 +1,17 @@
 import { Model } from 'mongoose';
-import { Injectable } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Email } from './schemas/email.schema';
 import { OutlookService } from '../outlook/outlook.service';
 import { Folder } from './schemas/folder.schema';
 import Bottleneck from 'bottleneck';
+import { Request } from 'express';
 
 // const Page_Size = 1000;
 const Rate_Per_Minute = 1000;
@@ -14,17 +21,27 @@ const limiter = new Bottleneck({
   minTime: 1000 / (Rate_Per_Minute / 60),
   maxConcurrent: 4,
 });
-
 @Injectable()
 export class EmailsService {
   constructor(
     @InjectModel(Email.name) private emailModel: Model<Email>,
     @InjectModel(Folder.name) private folderModel: Model<Folder>,
+    @Inject(forwardRef(() => OutlookService))
     private readonly outlookService: OutlookService,
   ) {}
 
   async create(emails: Email[]): Promise<any> {
     return await this.emailModel.insertMany(emails);
+  }
+
+  async update(id: string, email: Email): Promise<Email> {
+    const updatedEmail = await this.emailModel
+      .findOneAndUpdate({ externalId: id }, email)
+      .lean();
+    if (!updatedEmail) {
+      throw new NotFoundException();
+    }
+    return updatedEmail;
   }
 
   async createFolder(folders: Folder[]): Promise<any> {
@@ -68,5 +85,13 @@ export class EmailsService {
     }
 
     return itemCount;
+  }
+
+  async handleNotification(req: Request) {
+    try {
+      await this.outlookService.handleNotification(req);
+    } catch (error) {
+      throw new InternalServerErrorException();
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { EmailsService } from './emails.service';
 import { EmailsController } from './emails.controller';
 import { Email, EmailSchema } from './schemas/email.schema';
@@ -12,9 +12,10 @@ import { Folder, FolderSchema } from './schemas/folder.schema';
       { name: Email.name, schema: EmailSchema },
       { name: Folder.name, schema: FolderSchema },
     ]),
-    OutlookModule,
+    forwardRef(() => OutlookModule),
   ],
   controllers: [EmailsController],
   providers: [EmailsService],
+  exports: [EmailsService],
 })
 export class EmailsModule {}

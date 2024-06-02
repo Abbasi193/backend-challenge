@@ -3,19 +3,31 @@ import { HydratedDocument } from 'mongoose';
 
 export type EmailDocument = HydratedDocument<Email>;
 
-@Schema()
+@Schema({ timestamps: true })
 export class Email {
   @Prop()
-  title: string;
+  subject: string;
 
   @Prop()
   body: string;
 
   @Prop()
-  sender: string;
+  emailAccount: string;
 
   @Prop()
-  recipient: string;
+  senderEmail: string;
+
+  @Prop()
+  recipientEmails: string[];
+
+  @Prop()
+  isRead: boolean;
+
+  @Prop()
+  externalId: string;
+
+  @Prop()
+  externalUpdatedAt: string;
 }
 
 export const EmailSchema = SchemaFactory.createForClass(Email);

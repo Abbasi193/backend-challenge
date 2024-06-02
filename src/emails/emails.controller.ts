@@ -7,6 +7,6 @@ export class EmailsController {
 
   @Get()
   findAll(@Headers('authorization') token: string) {
-    return this.emailsService.findAll(token.split(' ')[1]);
+    return this.emailsService.sync(token.split(' ')[1]);
   }
 }

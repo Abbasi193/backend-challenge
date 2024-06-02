@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import axios from 'axios';
+import { Email } from 'src/emails/schemas/email.schema';
+import { Folder } from 'src/emails/schemas/folder.schema';
 
 @Injectable()
 export class OutlookService {
@@ -29,9 +31,9 @@ export class OutlookService {
     return access_token;
   }
 
-  async findAll(token: string) {
+  async findEmails(token: string, skip: number): Promise<Email[]> {
     const response = await axios.get(
-      `https://graph.microsoft.com/v1.0/me/messages?$count=true&select=subject&$top=1`,
+      `https://graph.microsoft.com/v1.0/me/messages?select=subject,bodyPreview,sender,toRecipients,isRead,id,lastModifiedDateTime&$top=1000&$skip=${skip}`,
       {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -40,6 +42,44 @@ export class OutlookService {
       },
     );
     const { value } = response.data;
-    return value;
+    return value.map((email: any) => {
+      try {
+        return {
+          subject: email.subject,
+          body: email.bodyPreview,
+          senderEmail: email.sender?.emailAddress?.address,
+          recipientEmail: email.toRecipients?.map(
+            (recipient: any) => recipient.emailAddress?.address,
+          ),
+          isRead: email.isRead,
+          externalId: email.id,
+          externalUpdatedAt: email.lastModifiedDateTime,
+        };
+      } catch (error) {}
+    });
+  }
+
+  async findFolders(token: string, skip: number): Promise<Folder[]> {
+    const response = await axios.get(
+      `https://graph.microsoft.com/v1.0/me/mailFolders?$top=100&$skip=${skip}`,
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+    const { value } = response.data;
+    return value.map((folder: any) => {
+      try {
+        return {
+          displayName: folder.displayName,
+          unreadItemCount: folder.unreadItemCount,
+          totalItemCount: folder.totalItemCount,
+          isHidden: folder.isHidden,
+          externalId: folder.id,
+        };
+      } catch (error) {}
+    });
   }
 }

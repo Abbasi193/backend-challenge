@@ -12,6 +12,7 @@ import { OutlookService } from '../outlook/outlook.service';
 import { Folder } from './schemas/folder.schema';
 import Bottleneck from 'bottleneck';
 import { Request } from 'express';
+import { EventsGateway } from 'src/events/events.gateway';
 
 // const Page_Size = 1000;
 const Rate_Per_Minute = 1000;
@@ -28,6 +29,7 @@ export class EmailsService {
     @InjectModel(Folder.name) private folderModel: Model<Folder>,
     @Inject(forwardRef(() => OutlookService))
     private readonly outlookService: OutlookService,
+    private readonly eventsGateway: EventsGateway,
   ) {}
 
   async create(emails: Email[]): Promise<any> {
@@ -49,6 +51,9 @@ export class EmailsService {
   }
 
   async sync(token: string): Promise<number> {
+    this.eventsGateway.sendEvent('sync', {
+      value: 100,
+    });
     await this.syncEmails(token);
     await this.syncFolders(token);
     return 1;

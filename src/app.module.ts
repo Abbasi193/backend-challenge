@@ -7,6 +7,7 @@ import { OutlookModule } from './outlook/outlook.module';
 import { EmailsModule } from './emails/emails.module';
 import { join } from 'path';
 import { AuthModule } from './auth/auth.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AuthModule } from './auth/auth.module';
     OutlookModule,
     EmailsModule,
     AuthModule,
+    EventsModule,
   ],
   // controllers: [AppController],
   providers: [AppService],

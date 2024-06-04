@@ -1,10 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 
-export type FolderDocument = HydratedDocument<Folder>;
+export type MailBoxDocument = HydratedDocument<MailBox>;
 
 @Schema({ timestamps: true })
-export class Folder {
+export class MailBox {
   @Prop()
   displayName: string;
 
@@ -18,10 +18,7 @@ export class Folder {
   totalItemCount: number;
 
   @Prop()
-  isHidden: boolean;
-
-  @Prop()
   externalId: string;
 }
 
-export const FolderSchema = SchemaFactory.createForClass(Folder);
+export const MailBoxSchema = SchemaFactory.createForClass(MailBox);

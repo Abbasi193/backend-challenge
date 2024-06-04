@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ImapMessageAttributes, ImapMessageBodyInfo } from 'imap';
 import { connect, ImapSimpleOptions, ImapSimple } from 'imap-simple';
 import { Email } from 'src/emails/schemas/email.schema';
+import { MailBox } from 'src/emails/schemas/mailBox.schema';
 const { simpleParser } = require('mailparser');
 
 type ImapMessageBodyInfoWithBody = ImapMessageBodyInfo & { body: string };
@@ -9,10 +10,6 @@ type FetchedMessage = {
   seqno: number;
   parts: ImapMessageBodyInfoWithBody[];
   attrs: ImapMessageAttributes;
-};
-type MailBox = {
-  name: string;
-  count: number;
 };
 
 const MAX_REQUESTS = 1000;
@@ -121,36 +118,39 @@ export class ImapService {
 
   async startListening(
     mailBox: MailBox,
-    onMail: (param: Email[]) => void,
-    onUpdate: (param: Email[]) => void,
+    onMail: (param: Email) => void,
+    onUpdate: (param: Email) => void,
   ) {
-    const connection = await this.connectToImap(mailBox.name);
+    const connection = await this.connectToImap(mailBox.displayName);
 
     connection.on('mail', async () => {
       try {
         const emails = await this.getEmails(connection, ['RECENT']);
-        onMail(emails);
+        await onMail(emails[0]);
       } catch {}
     });
 
     connection.on('update', async (seqno) => {
       try {
         const emails = await this.getEmails(connection, [`${seqno}:${seqno}`]);
-        onUpdate(emails);
+        await onUpdate(emails[0]);
       } catch {}
     });
   }
 
-  async fetchPaginatedEmails(mailBox: MailBox) {
-    const connection = await this.connectToImap(mailBox.name);
+  async fetchPaginatedEmails(
+    mailBox: MailBox,
+    callback: (emails: Email[]) => Promise<void>,
+  ) {
+    const connection = await this.connectToImap(mailBox.displayName);
 
     await this.run(async (itemCount) => {
-      if (itemCount > mailBox.count) return 0;
+      if (itemCount > mailBox.totalItemCount) return 0;
       const emails = await this.getEmails(connection, [
         'ALL',
-        `${Math.max(itemCount, 1)}:${Math.min(itemCount + PAGE_SIZE, mailBox.count)}`,
+        `${Math.max(itemCount, 1)}:${Math.min(itemCount + PAGE_SIZE, mailBox.totalItemCount)}`,
       ]);
-      console.log(emails.length);
+      await callback(emails);
       return emails.length;
     });
     await connection.end();
@@ -169,8 +169,8 @@ export class ImapService {
     data = data.map((e: any) => {
       console.log(e);
       return {
-        name: e.name,
-        count: e.messages.total,
+        displayName: e.name,
+        totalItemCount: e.messages.total,
       };
     });
     await connection.end();

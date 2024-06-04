@@ -4,7 +4,7 @@ import { EmailsController } from './emails.controller';
 import { Email, EmailSchema } from './schemas/email.schema';
 import { MongooseModule } from '@nestjs/mongoose';
 import { OutlookModule } from 'src/outlook/outlook.module';
-import { Folder, FolderSchema } from './schemas/folder.schema';
+import { MailBox, MailBoxSchema } from './schemas/mailBox.schema';
 import { EventsModule } from 'src/events/events.module';
 import { ImapModule } from 'src/imap/imap.module';
 
@@ -12,7 +12,7 @@ import { ImapModule } from 'src/imap/imap.module';
   imports: [
     MongooseModule.forFeature([
       { name: Email.name, schema: EmailSchema },
-      { name: Folder.name, schema: FolderSchema },
+      { name: MailBox.name, schema: MailBoxSchema },
     ]),
     forwardRef(() => OutlookModule),
     EventsModule,

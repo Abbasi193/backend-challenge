@@ -1,4 +1,4 @@
-import { Model } from 'mongoose';
+import { HydratedDocument, Model } from 'mongoose';
 import {
   forwardRef,
   Inject,
@@ -9,7 +9,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Email } from './schemas/email.schema';
 import { OutlookService } from '../outlook/outlook.service';
-import { Folder } from './schemas/folder.schema';
+import { MailBox } from './schemas/mailBox.schema';
 import Bottleneck from 'bottleneck';
 import { Request } from 'express';
 import { EventsGateway } from 'src/events/events.gateway';
@@ -27,7 +27,7 @@ const limiter = new Bottleneck({
 export class EmailsService {
   constructor(
     @InjectModel(Email.name) private emailModel: Model<Email>,
-    @InjectModel(Folder.name) private folderModel: Model<Folder>,
+    @InjectModel(MailBox.name) private mailBoxModel: Model<MailBox>,
     @Inject(forwardRef(() => OutlookService))
     private readonly outlookService: OutlookService,
     private readonly eventsGateway: EventsGateway,
@@ -36,6 +36,10 @@ export class EmailsService {
 
   async create(emails: Email[]): Promise<any> {
     return await this.emailModel.insertMany(emails);
+  }
+
+  async delete(id: string): Promise<any> {
+    return await this.emailModel.deleteOne({ externalId: id });
   }
 
   async update(id: string, email: Email): Promise<Email> {
@@ -48,17 +52,19 @@ export class EmailsService {
     return updatedEmail;
   }
 
-  async createFolder(folders: Folder[]): Promise<any> {
-    return await this.folderModel.insertMany(folders);
+  async createMailBox(mailBoxes: MailBox[]): Promise<any> {
+    return await this.mailBoxModel.insertMany(mailBoxes);
   }
 
   async sync(token: string): Promise<number | any> {
-    const mailBoxData = await this.imapService.getMailBoxInfo();
-    mailBoxData.forEach((mailBox) => {
-      // if(mailBox.count > 0)
-      //     fetchPaginatedEmails(mailBox)
-      this.imapService.startListening(mailBox, console.log, console.log);
-    });
+    const emailAccount = 'a@s.com';
+    this.listenImap(token, emailAccount);
+    // const mailBoxData = await this.imapService.getMailBoxInfo();
+    // mailBoxData.forEach((mailBox) => {
+    //   // if(mailBox.count > 0)
+    //   //     fetchPaginatedEmails(mailBox)
+    //   this.imapService.startListening(mailBox, console.log, console.log);
+    // });
 
     // return await this.outlookService.registerWebhook(token);
 
@@ -70,8 +76,48 @@ export class EmailsService {
     //   value: 100,
     // });
     // await this.syncEmails(token);
-    // await this.syncFolders(token);
+    // await this.syncMailBoxes(token);
     // return 1;
+  }
+  async syncImapMailbox() {
+    const mailBoxes = await this.imapService.getMailBoxInfo();
+    await this.createMailBox(mailBoxes);
+  }
+  async syncImap(token: string, emailAccount: string): Promise<number> {
+    const mailBoxData: HydratedDocument<MailBox>[] =
+      await this.mailBoxModel.find();
+
+    mailBoxData.forEach((mailBox) => {
+      if (mailBox.totalItemCount > 0)
+        this.imapService.fetchPaginatedEmails(mailBox, async (emails) => {
+          emails = emails.map((e) => {
+            return { ...e, emailAccount, mailBoxId: mailBox._id.toString() };
+          });
+          await this.create(emails);
+        });
+    });
+    return 1;
+  }
+
+  async listenImap(token: string, emailAccount: string): Promise<number> {
+    const mailBoxData: HydratedDocument<MailBox>[] =
+      await this.mailBoxModel.find();
+
+    mailBoxData.forEach((mailBox) => {
+      this.imapService.startListening(
+        mailBox,
+        async (email) => {
+          await this.delete(email.externalId);
+          await this.create([
+            { ...email, emailAccount, mailBoxId: mailBox._id.toString() },
+          ]);
+        },
+        async (email) => {
+          await this.update(email.externalId, email);
+        },
+      );
+    });
+    return 1;
   }
 
   async syncEmails(token: string): Promise<number> {
@@ -82,11 +128,11 @@ export class EmailsService {
     });
   }
 
-  async syncFolders(token: string): Promise<number> {
+  async syncMailBoxes(token: string): Promise<number> {
     return await this.run(async (index) => {
-      const folders = await this.outlookService.findFolders(token, index);
-      await this.createFolder(folders);
-      return folders.length;
+      const mailBoxes = await this.outlookService.findMailBoxes(token, index);
+      await this.createMailBox(mailBoxes);
+      return mailBoxes.length;
     });
   }
 

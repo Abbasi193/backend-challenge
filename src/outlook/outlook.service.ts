@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import axios from 'axios';
 import { Email } from 'src/emails/schemas/email.schema';
-import { Folder } from 'src/emails/schemas/folder.schema';
+import { MailBox } from 'src/emails/schemas/mailBox.schema';
 import { Request } from 'express';
 import { EmailsService } from 'src/emails/emails.service';
 
@@ -17,17 +17,26 @@ export class OutlookService {
     private readonly emailService: EmailsService,
   ) {}
 
-  getAuthURL(): string {
-    return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${process.env.CLIENT_ID}&response_type=code&redirect_uri=${process.env.REDIRECT_URI}&scope=openid%20email%20Mail.Read%20Mail.ReadBasic%20Mail.ReadBasic.Shared%20User.Read`;
+  getAuthURL(type: string): string {
+    const scope =
+      type == 'graph'
+        ? 'openid%20email%20Mail.Read%20Mail.ReadBasic%20Mail.ReadBasic.Shared%20User.Read'
+        : 'https://outlook.office.com/IMAP.AccessAsUser.All';
+
+    return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${process.env.CLIENT_ID}&response_type=code&redirect_uri=${process.env.REDIRECT_URI}&scope=${scope}`;
   }
 
-  async getToken(code: string): Promise<string> {
+  async getToken(code: string, type: string): Promise<string> {
+    const scope =
+      type == 'graph'
+        ? 'openid%20email%20Mail.Read%20Mail.ReadBasic%20Mail.ReadBasic.Shared%20User.Read'
+        : 'https://outlook.office.com/IMAP.AccessAsUser.All';
+
     const response = await axios.post(
       `https://login.microsoftonline.com/common/oauth2/v2.0/token`,
       new URLSearchParams({
         client_id: process.env.CLIENT_ID || 'CLIENT_ID',
-        scope:
-          'openid email Mail.Read Mail.ReadBasic Mail.ReadBasic.Shared User.Read',
+        scope: scope,
         code: code,
         redirect_uri: process.env.REDIRECT_URI || 'REDIRECT_URI',
         grant_type: 'authorization_code',
@@ -72,7 +81,7 @@ export class OutlookService {
     });
   }
 
-  async findFolders(token: string, skip: number): Promise<Folder[]> {
+  async findMailBoxes(token: string, skip: number): Promise<MailBox[]> {
     const response = await axios.get(
       `https://graph.microsoft.com/v1.0/me/mailFolders?$top=100&$skip=${skip}`,
       {
@@ -89,7 +98,6 @@ export class OutlookService {
           displayName: folder.displayName,
           unreadItemCount: folder.unreadItemCount,
           totalItemCount: folder.totalItemCount,
-          isHidden: folder.isHidden,
           externalId: folder.id,
         };
       } catch (error) {}

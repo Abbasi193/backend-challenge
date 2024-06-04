@@ -15,8 +15,8 @@ import { Request } from 'express';
 import { EventsGateway } from 'src/events/events.gateway';
 import { ImapService } from 'src/imap/imap.service';
 import { ImapSimpleOptions } from 'imap-simple';
+import { Integration } from 'src/auth/schemas/integration.schema';
 
-const TOKEN = ''
 // const Page_Size = 1000;
 const Rate_Per_Minute = 1000;
 const Max_Request = 10000;
@@ -30,6 +30,7 @@ export class EmailsService {
   constructor(
     @InjectModel(Email.name) private emailModel: Model<Email>,
     @InjectModel(MailBox.name) private mailBoxModel: Model<MailBox>,
+    @InjectModel(Integration.name) private integrationModel: Model<Integration>,
     @Inject(forwardRef(() => OutlookService))
     private readonly outlookService: OutlookService,
     private readonly eventsGateway: EventsGateway,
@@ -58,18 +59,21 @@ export class EmailsService {
     return await this.mailBoxModel.insertMany(mailBoxes);
   }
 
-  async setup(token: string, type: string) {
-    const emailAccount = 'user@hotmail.com';
+  async setup(token: string, type: string, emailAccount: string) {
     if (type == 'graph') {
-      // await this.syncMailBoxes(token, emailAccount);
-      // await this.syncEmails(token, emailAccount);
-      await this.registerWebhook(token, emailAccount);
+      try {
+        await this.syncMailBoxes(token, emailAccount);
+        await this.syncEmails(token, emailAccount);
+        await this.registerWebhook(token, emailAccount);
+      } catch (e) {
+        console.log(e.response.data);
+      }
     } else {
       const imapConfig: ImapSimpleOptions = {
         imap: {
-          user: 'user@hotmail.com',
-          password: 'password',
-          // xoauth2: btoa(`user=${email}\x01auth=Bearer ${token}\x01\x01`),
+          user: emailAccount,
+          password: '',
+          xoauth2: btoa(`user=${emailAccount}\x01auth=Bearer ${token}\x01\x01`),
           host: 'imap-mail.outlook.com',
           port: 993,
           tls: true,
@@ -84,8 +88,7 @@ export class EmailsService {
   }
 
   async sync(token: string): Promise<number | any> {
-    await this.setup(token, 'graph');
-
+    await this.setup(token, 'graph', 'mail@hotmail.com');
   }
 
   async syncImap(
@@ -195,11 +198,16 @@ export class EmailsService {
     emailAccount: string,
   ) {
     try {
+      const integration: any = await this.integrationModel.findOne({
+        email: emailAccount,
+      });
+      const token = integration.accessToken;
+
       if (changeType == 'updated') {
-        const email = await this.outlookService.findEmail(TOKEN, resourceId);
+        const email = await this.outlookService.findEmail(token, resourceId);
         await this.update(resourceId, email);
       } else if (changeType == 'created') {
-        const email = await this.outlookService.findEmail(TOKEN, resourceId);
+        const email = await this.outlookService.findEmail(token, resourceId);
         await this.create([{ ...email, emailAccount: emailAccount }]);
       } else if (changeType == 'deleted') {
         await this.delete(resourceId);

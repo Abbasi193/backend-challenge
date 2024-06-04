@@ -1,5 +1,11 @@
 import { IsString } from 'class-validator';
 export class TokenDto {
   @IsString()
-  body: string;
+  code: string;
+
+  @IsString()
+  provider: string;
+
+  @IsString()
+  type: string;
 }

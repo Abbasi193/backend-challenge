@@ -21,16 +21,16 @@ export class OutlookService {
     const scope =
       type == 'graph'
         ? 'openid%20email%20Mail.Read%20Mail.ReadBasic%20Mail.ReadBasic.Shared%20User.Read'
-        : 'https://outlook.office.com/IMAP.AccessAsUser.All';
+        : 'openid%20email%20https://outlook.office.com/IMAP.AccessAsUser.All';
 
     return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${process.env.CLIENT_ID}&response_type=code&redirect_uri=${process.env.REDIRECT_URI}&scope=${scope}`;
   }
 
-  async getToken(code: string, type: string): Promise<string> {
+  async getToken(code: string, type: string): Promise<any> {
     const scope =
       type == 'graph'
-        ? 'openid%20email%20Mail.Read%20Mail.ReadBasic%20Mail.ReadBasic.Shared%20User.Read'
-        : 'https://outlook.office.com/IMAP.AccessAsUser.All';
+        ? 'openid email Mail.Read Mail.ReadBasic Mail.ReadBasic.Shared User.Read'
+        : 'openid email https://outlook.office.com/IMAP.AccessAsUser.All';
 
     const response = await axios.post(
       `https://login.microsoftonline.com/common/oauth2/v2.0/token`,
@@ -49,7 +49,10 @@ export class OutlookService {
       },
     );
     const { access_token } = response.data;
-    return access_token;
+
+    const email = JSON.parse(atob(response.data.id_token.split('.')[1])).email;
+
+    return { access_token, email };
   }
 
   async findEmails(token: string, skip: number): Promise<Email[]> {

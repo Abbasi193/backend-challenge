@@ -54,7 +54,7 @@ export class OutlookService {
 
   async findEmails(token: string, skip: number): Promise<Email[]> {
     const response = await axios.get(
-      `https://graph.microsoft.com/v1.0/me/messages?select=subject,bodyPreview,sender,toRecipients,isRead,id,lastModifiedDateTime&$top=1000&$skip=${skip}`,
+      `https://graph.microsoft.com/v1.0/me/messages?select=subject,bodyPreview,sender,toRecipients,isRead,id,parentFolderId,sentDateTime&$top=1000&$skip=${skip}`,
       {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -75,7 +75,8 @@ export class OutlookService {
           ),
           isRead: email.isRead,
           externalId: email.id,
-          date: email.lastModifiedDateTime,
+          date: email.sentDateTime,
+          mailBoxId: email.parentFolderId,
         };
       } catch (error) {}
     });
@@ -126,19 +127,20 @@ export class OutlookService {
       ),
       isRead: email.isRead,
       externalId: email.id,
-      date: email.lastModifiedDateTime,
+      date: email.sentDateTime,
+      mailBoxId: email.parentFolderId,
     };
   }
 
-  async registerWebhook(token: string): Promise<string> {
+  async registerWebhook(token: string, emailAccount: string): Promise<string> {
     try {
       const date = new Date();
-      date.setDate(date.getDate() + 7);
+      date.setDate(date.getDate() + 6);
       const response = await axios.post(
         `https://graph.microsoft.com/v1.0/subscriptions`,
         {
           changeType: 'created,updated,deleted',
-          notificationUrl: `${process.env.WEBHOOK_URL}/emails/notification`,
+          notificationUrl: `${process.env.WEBHOOK_URL}/emails/notification/microsoft?email=${emailAccount}`,
           resource: '/me/messages',
           expirationDateTime: date.toISOString(),
           clientState: process.env.CLIENT_STATE || '',
@@ -153,15 +155,14 @@ export class OutlookService {
       return response.data;
     } catch (error) {
       console.log(error.response.data);
-      return error.response.data;
+      throw error;
     }
   }
 
-  // async handleUpdated(id: string) {
-  //   // const email = await this.findEmail(id)
-  // }
-
-  async handleNotification(req: Request) {
+  async handleNotification(
+    req: Request,
+    callback: (resourceId: string, changeType: string) => Promise<void>,
+  ) {
     if (req.query.validationToken) {
       return req.query.validationToken;
     }
@@ -170,8 +171,6 @@ export class OutlookService {
     if (data.clientState !== process.env.CLIENT_STATE) {
       throw new UnauthorizedException();
     }
-    if (data.changeType == 'updated') {
-      // await this.handleUpdated(data.resourceData.id);
-    }
+    await callback(data.resourceData.id, data.changeType);
   }
 }

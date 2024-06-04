@@ -9,6 +9,7 @@ import { join } from 'path';
 import { AuthModule } from './auth/auth.module';
 import { EventsModule } from './events/events.module';
 import { ImapModule } from './imap/imap.module';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
@@ -25,6 +26,11 @@ import { ImapModule } from './imap/imap.module';
     AuthModule,
     EventsModule,
     ImapModule,
+    JwtModule.register({
+      global: true,
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: '60m' },
+    }),
   ],
   // controllers: [AppController],
   providers: [AppService],

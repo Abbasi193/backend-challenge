@@ -15,21 +15,9 @@ type FetchedMessage = {
 const MAX_REQUESTS = 1000;
 const PAGE_SIZE = 100;
 
-const imapConfig: ImapSimpleOptions = {
-  imap: {
-    user: 'user@hotmail.com',
-    password: 'password',
-    // xoauth2: btoa(`user=${email}\x01auth=Bearer ${token}\x01\x01`),
-    host: 'imap-mail.outlook.com',
-    port: 993,
-    tls: true,
-    authTimeout: 3000,
-  },
-};
-
 @Injectable()
 export class ImapService {
-  async connectToImap(mailBox?: any) {
+  async connectToImap(imapConfig: ImapSimpleOptions, mailBox?: any) {
     try {
       const connection = await connect(imapConfig);
 
@@ -117,11 +105,15 @@ export class ImapService {
   }
 
   async startListening(
+    imapConfig: ImapSimpleOptions,
     mailBox: MailBox,
     onMail: (param: Email) => void,
     onUpdate: (param: Email) => void,
   ) {
-    const connection = await this.connectToImap(mailBox.displayName);
+    const connection = await this.connectToImap(
+      imapConfig,
+      mailBox.displayName,
+    );
 
     connection.on('mail', async () => {
       try {
@@ -139,10 +131,14 @@ export class ImapService {
   }
 
   async fetchPaginatedEmails(
+    imapConfig: ImapSimpleOptions,
     mailBox: MailBox,
     callback: (emails: Email[]) => Promise<void>,
   ) {
-    const connection = await this.connectToImap(mailBox.displayName);
+    const connection = await this.connectToImap(
+      imapConfig,
+      mailBox.displayName,
+    );
 
     await this.run(async (itemCount) => {
       if (itemCount > mailBox.totalItemCount) return 0;
@@ -156,8 +152,8 @@ export class ImapService {
     await connection.end();
   }
 
-  async getMailBoxInfo(): Promise<MailBox[]> {
-    const connection = await this.connectToImap();
+  async getMailBoxInfo(imapConfig: ImapSimpleOptions): Promise<MailBox[]> {
+    const connection = await this.connectToImap(imapConfig);
 
     let data: any = [];
     const boxes = Object.keys(await connection.getBoxes());
@@ -167,7 +163,6 @@ export class ImapService {
       await connection.closeBox(false);
     }
     data = data.map((e: any) => {
-      console.log(e);
       return {
         displayName: e.name,
         totalItemCount: e.messages.total,
@@ -211,6 +206,7 @@ export class ImapService {
       recipientEmails: parsedHeader.to?.value?.map((v: any) => v.address),
       senderEmail: parsedHeader.from?.value?.map((v: any) => v.address)[0],
       isRead: message.attrs.flags.includes('\\Seen'),
+      mailBoxId: '',
     };
   }
 }

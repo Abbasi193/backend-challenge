@@ -27,7 +27,7 @@ export class Email {
   externalId: string;
 
   @Prop()
-  mailBoxId?: string;
+  mailBoxId: string;
 
   @Prop()
   date: string;

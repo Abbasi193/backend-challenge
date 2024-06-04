@@ -1,4 +1,13 @@
-import { Controller, Get, Headers, HttpCode, Post, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import { EmailsService } from './emails.service';
 import { Request } from 'express';
 
@@ -12,8 +21,12 @@ export class EmailsController {
   }
 
   @HttpCode(200)
-  @Post('notification')
-  handleNotification(@Req() request: Request) {
-    return this.emailsService.handleNotification(request);
+  @Post('notification/:provider')
+  handleNotification(
+    @Req() request: Request,
+    @Param('provider') provider: string,
+    @Query('email') email: string,
+  ) {
+    return this.emailsService.handleNotification(request, provider, email);
   }
 }

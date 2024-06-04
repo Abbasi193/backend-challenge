@@ -14,7 +14,9 @@ import Bottleneck from 'bottleneck';
 import { Request } from 'express';
 import { EventsGateway } from 'src/events/events.gateway';
 import { ImapService } from 'src/imap/imap.service';
+import { ImapSimpleOptions } from 'imap-simple';
 
+const TOKEN = ''
 // const Page_Size = 1000;
 const Rate_Per_Minute = 1000;
 const Max_Request = 10000;
@@ -56,55 +58,68 @@ export class EmailsService {
     return await this.mailBoxModel.insertMany(mailBoxes);
   }
 
+  async setup(token: string, type: string) {
+    const emailAccount = 'user@hotmail.com';
+    if (type == 'graph') {
+      // await this.syncMailBoxes(token, emailAccount);
+      // await this.syncEmails(token, emailAccount);
+      await this.registerWebhook(token, emailAccount);
+    } else {
+      const imapConfig: ImapSimpleOptions = {
+        imap: {
+          user: 'user@hotmail.com',
+          password: 'password',
+          // xoauth2: btoa(`user=${email}\x01auth=Bearer ${token}\x01\x01`),
+          host: 'imap-mail.outlook.com',
+          port: 993,
+          tls: true,
+          authTimeout: 3000,
+        },
+      };
+      const mailBoxes = await this.imapService.getMailBoxInfo(imapConfig);
+      await this.createMailBox(mailBoxes);
+      this.syncImap(emailAccount, imapConfig);
+      this.listenImap(emailAccount, imapConfig);
+    }
+  }
+
   async sync(token: string): Promise<number | any> {
-    const emailAccount = 'a@s.com';
-    this.listenImap(token, emailAccount);
-    // const mailBoxData = await this.imapService.getMailBoxInfo();
-    // mailBoxData.forEach((mailBox) => {
-    //   // if(mailBox.count > 0)
-    //   //     fetchPaginatedEmails(mailBox)
-    //   this.imapService.startListening(mailBox, console.log, console.log);
-    // });
+    await this.setup(token, 'graph');
 
-    // return await this.outlookService.registerWebhook(token);
-
-    // await this.outlookService.connect();
-    // let x = await this.outlookService.fetchEmails();
-    // console.log(x)
-
-    // this.eventsGateway.sendEvent('sync', {
-    //   value: 100,
-    // });
-    // await this.syncEmails(token);
-    // await this.syncMailBoxes(token);
-    // return 1;
   }
-  async syncImapMailbox() {
-    const mailBoxes = await this.imapService.getMailBoxInfo();
-    await this.createMailBox(mailBoxes);
-  }
-  async syncImap(token: string, emailAccount: string): Promise<number> {
+
+  async syncImap(
+    emailAccount: string,
+    imapConfig: ImapSimpleOptions,
+  ): Promise<void> {
     const mailBoxData: HydratedDocument<MailBox>[] =
       await this.mailBoxModel.find();
 
     mailBoxData.forEach((mailBox) => {
       if (mailBox.totalItemCount > 0)
-        this.imapService.fetchPaginatedEmails(mailBox, async (emails) => {
-          emails = emails.map((e) => {
-            return { ...e, emailAccount, mailBoxId: mailBox._id.toString() };
-          });
-          await this.create(emails);
-        });
+        this.imapService.fetchPaginatedEmails(
+          imapConfig,
+          mailBox,
+          async (emails) => {
+            emails = emails.map((e) => {
+              return { ...e, emailAccount, mailBoxId: mailBox._id.toString() };
+            });
+            await this.create(emails);
+          },
+        );
     });
-    return 1;
   }
 
-  async listenImap(token: string, emailAccount: string): Promise<number> {
+  async listenImap(
+    emailAccount: string,
+    imapConfig: ImapSimpleOptions,
+  ): Promise<void> {
     const mailBoxData: HydratedDocument<MailBox>[] =
       await this.mailBoxModel.find();
 
     mailBoxData.forEach((mailBox) => {
       this.imapService.startListening(
+        imapConfig,
         mailBox,
         async (email) => {
           await this.delete(email.externalId);
@@ -117,20 +132,25 @@ export class EmailsService {
         },
       );
     });
-    return 1;
   }
 
-  async syncEmails(token: string): Promise<number> {
+  async syncEmails(token: string, emailAccount: string): Promise<number> {
     return await this.run(async (index) => {
-      const emails = await this.outlookService.findEmails(token, index);
+      let emails = await this.outlookService.findEmails(token, index);
+      emails = emails.map((e) => {
+        return { ...e, emailAccount };
+      });
       await this.create(emails);
       return emails.length;
     });
   }
 
-  async syncMailBoxes(token: string): Promise<number> {
+  async syncMailBoxes(token: string, emailAccount: string): Promise<number> {
     return await this.run(async (index) => {
-      const mailBoxes = await this.outlookService.findMailBoxes(token, index);
+      let mailBoxes = await this.outlookService.findMailBoxes(token, index);
+      mailBoxes = mailBoxes.map((e) => {
+        return { ...e, emailAccount };
+      });
       await this.createMailBox(mailBoxes);
       return mailBoxes.length;
     });
@@ -153,9 +173,45 @@ export class EmailsService {
     return itemCount;
   }
 
-  async handleNotification(req: Request) {
+  async handleNotification(
+    req: Request,
+    provider: string,
+    emailAccount: string,
+  ) {
     try {
-      return await this.outlookService.handleNotification(req);
+      return await this.outlookService.handleNotification(
+        req,
+        async (resourceId, changeType) => {
+          return await this.handleChange(resourceId, changeType, emailAccount);
+        },
+      );
+    } catch (error) {
+      throw new InternalServerErrorException();
+    }
+  }
+  async handleChange(
+    resourceId: string,
+    changeType: string,
+    emailAccount: string,
+  ) {
+    try {
+      if (changeType == 'updated') {
+        const email = await this.outlookService.findEmail(TOKEN, resourceId);
+        await this.update(resourceId, email);
+      } else if (changeType == 'created') {
+        const email = await this.outlookService.findEmail(TOKEN, resourceId);
+        await this.create([{ ...email, emailAccount: emailAccount }]);
+      } else if (changeType == 'deleted') {
+        await this.delete(resourceId);
+      }
+    } catch (error) {
+      console.log(error.message);
+    }
+  }
+
+  async registerWebhook(token: string, emailAccount: string) {
+    try {
+      return await this.outlookService.registerWebhook(token, emailAccount);
     } catch (error) {
       throw new InternalServerErrorException();
     }

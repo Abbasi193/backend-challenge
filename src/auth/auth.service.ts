@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { OutlookService } from 'src/outlook/outlook.service';
 import { SignInDto } from './dto/signin.dto';
 import { User, UserDocument } from './schemas/user.schema';

@@ -1,4 +1,4 @@
-import { forwardRef, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { EmailsService } from './emails.service';
 import { EmailsController } from './emails.controller';
 import { Email, EmailSchema } from './schemas/email.schema';
@@ -19,7 +19,7 @@ import {
       { name: MailBox.name, schema: MailBoxSchema },
       { name: Integration.name, schema: IntegrationSchema },
     ]),
-    forwardRef(() => OutlookModule),
+    OutlookModule,
     EventsModule,
     ImapModule,
   ],

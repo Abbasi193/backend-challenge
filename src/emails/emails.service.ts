@@ -10,21 +10,13 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Email } from './schemas/email.schema';
 import { OutlookService } from '../outlook/outlook.service';
 import { MailBox } from './schemas/mailBox.schema';
-import Bottleneck from 'bottleneck';
 import { Request } from 'express';
 import { EventsGateway } from 'src/events/events.gateway';
 import { ImapService } from 'src/imap/imap.service';
 import { ImapSimpleOptions } from 'imap-simple';
 import { Integration } from 'src/auth/schemas/integration.schema';
+import { runWithBottleneck } from 'src/common/utils/rate-limiter';
 
-// const Page_Size = 1000;
-const Rate_Per_Minute = 1000;
-const Max_Request = 10000;
-
-const limiter = new Bottleneck({
-  minTime: 1000 / (Rate_Per_Minute / 60),
-  maxConcurrent: 4,
-});
 @Injectable()
 export class EmailsService {
   constructor(
@@ -80,9 +72,8 @@ export class EmailsService {
           authTimeout: 3000,
         },
       };
-      const mailBoxes = await this.imapService.getMailBoxInfo(imapConfig);
-      await this.createMailBox(mailBoxes);
-      this.syncImap(emailAccount, imapConfig);
+      await this.syncMailBoxesImap(imapConfig);
+      this.syncEmailsImap(emailAccount, imapConfig);
       this.listenImap(emailAccount, imapConfig);
     }
   }
@@ -91,7 +82,12 @@ export class EmailsService {
     await this.setup(token, 'graph', 'mail@hotmail.com');
   }
 
-  async syncImap(
+  private async syncMailBoxesImap(imapConfig: ImapSimpleOptions) {
+    const mailBoxes = await this.imapService.getMailBoxInfo(imapConfig);
+    await this.createMailBox(mailBoxes);
+  }
+
+  private async syncEmailsImap(
     emailAccount: string,
     imapConfig: ImapSimpleOptions,
   ): Promise<void> {
@@ -113,7 +109,7 @@ export class EmailsService {
     });
   }
 
-  async listenImap(
+  private async listenImap(
     emailAccount: string,
     imapConfig: ImapSimpleOptions,
   ): Promise<void> {
@@ -131,14 +127,21 @@ export class EmailsService {
           ]);
         },
         async (email) => {
-          await this.update(email.externalId, email);
+          await this.update(email.externalId, {
+            ...email,
+            emailAccount,
+            mailBoxId: mailBox._id.toString(),
+          });
         },
       );
     });
   }
 
-  async syncEmails(token: string, emailAccount: string): Promise<number> {
-    return await this.run(async (index) => {
+  private async syncEmails(
+    token: string,
+    emailAccount: string,
+  ): Promise<number> {
+    return await runWithBottleneck(async (index) => {
       let emails = await this.outlookService.findEmails(token, index);
       emails = emails.map((e) => {
         return { ...e, emailAccount };
@@ -148,8 +151,11 @@ export class EmailsService {
     });
   }
 
-  async syncMailBoxes(token: string, emailAccount: string): Promise<number> {
-    return await this.run(async (index) => {
+  private async syncMailBoxes(
+    token: string,
+    emailAccount: string,
+  ): Promise<number> {
+    return await runWithBottleneck(async (index) => {
       let mailBoxes = await this.outlookService.findMailBoxes(token, index);
       mailBoxes = mailBoxes.map((e) => {
         return { ...e, emailAccount };
@@ -157,23 +163,6 @@ export class EmailsService {
       await this.createMailBox(mailBoxes);
       return mailBoxes.length;
     });
-  }
-
-  async run(callback: (x: number) => Promise<number>): Promise<number> {
-    let requestCount = 0;
-    let itemCount = 0;
-    let hasMoreItems = true;
-
-    while (hasMoreItems && requestCount < Max_Request) {
-      await limiter.schedule(async () => {
-        const count = await callback(itemCount);
-        itemCount += count;
-        requestCount++;
-        hasMoreItems = count > 0;
-      });
-    }
-
-    return itemCount;
   }
 
   async handleNotification(
@@ -192,7 +181,8 @@ export class EmailsService {
       throw new InternalServerErrorException();
     }
   }
-  async handleChange(
+
+  private async handleChange(
     resourceId: string,
     changeType: string,
     emailAccount: string,
@@ -217,7 +207,7 @@ export class EmailsService {
     }
   }
 
-  async registerWebhook(token: string, emailAccount: string) {
+  private async registerWebhook(token: string, emailAccount: string) {
     try {
       return await this.outlookService.registerWebhook(token, emailAccount);
     } catch (error) {

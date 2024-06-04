@@ -1,6 +1,4 @@
 import {
-  forwardRef,
-  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -8,15 +6,10 @@ import axios from 'axios';
 import { Email } from 'src/emails/schemas/email.schema';
 import { MailBox } from 'src/emails/schemas/mailBox.schema';
 import { Request } from 'express';
-import { EmailsService } from 'src/emails/emails.service';
+import { BaseEmailProvider } from 'src/common/email-provider';
 
 @Injectable()
-export class OutlookService {
-  constructor(
-    @Inject(forwardRef(() => EmailsService))
-    private readonly emailService: EmailsService,
-  ) {}
-
+export class OutlookService extends BaseEmailProvider {
   getAuthURL(type: string): string {
     const scope =
       type == 'graph'
@@ -165,7 +158,7 @@ export class OutlookService {
   async handleNotification(
     req: Request,
     callback: (resourceId: string, changeType: string) => Promise<void>,
-  ) {
+  ): Promise<any> {
     if (req.query.validationToken) {
       return req.query.validationToken;
     }

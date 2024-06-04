@@ -1,20 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { ImapMessageAttributes, ImapMessageBodyInfo } from 'imap';
 import { connect, ImapSimpleOptions, ImapSimple } from 'imap-simple';
 import { Email } from 'src/emails/schemas/email.schema';
 import { MailBox } from 'src/emails/schemas/mailBox.schema';
+import {
+  FetchedMessage,
+  ImapMessageBodyInfoWithBody,
+} from './types/imap.types';
+import { run } from 'src/common/utils/rate-limiter';
 const { simpleParser } = require('mailparser');
 
-type ImapMessageBodyInfoWithBody = ImapMessageBodyInfo & { body: string };
-type FetchedMessage = {
-  seqno: number;
-  parts: ImapMessageBodyInfoWithBody[];
-  attrs: ImapMessageAttributes;
-};
-
-const MAX_REQUESTS = 1000;
 const PAGE_SIZE = 100;
-
 @Injectable()
 export class ImapService {
   async connectToImap(imapConfig: ImapSimpleOptions, mailBox?: any) {
@@ -140,7 +135,7 @@ export class ImapService {
       mailBox.displayName,
     );
 
-    await this.run(async (itemCount) => {
+    await run(async (itemCount) => {
       if (itemCount > mailBox.totalItemCount) return 0;
       const emails = await this.getEmails(connection, [
         'ALL',
@@ -171,20 +166,6 @@ export class ImapService {
     await connection.end();
 
     return data;
-  }
-
-  async run(callback: (x: number) => Promise<number>) {
-    let requestCount = 0;
-    let itemCount = 0;
-    let hasMoreItems = true;
-
-    while (hasMoreItems && requestCount < MAX_REQUESTS) {
-      const count = await callback(itemCount);
-      itemCount += count;
-      requestCount++;
-      hasMoreItems = count > 0;
-    }
-    return itemCount;
   }
 
   async parseEmail(message: FetchedMessage): Promise<Email> {

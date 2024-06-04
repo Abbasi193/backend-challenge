@@ -13,6 +13,7 @@ import { Folder } from './schemas/folder.schema';
 import Bottleneck from 'bottleneck';
 import { Request } from 'express';
 import { EventsGateway } from 'src/events/events.gateway';
+import { ImapService } from 'src/imap/imap.service';
 
 // const Page_Size = 1000;
 const Rate_Per_Minute = 1000;
@@ -30,6 +31,7 @@ export class EmailsService {
     @Inject(forwardRef(() => OutlookService))
     private readonly outlookService: OutlookService,
     private readonly eventsGateway: EventsGateway,
+    private readonly imapService: ImapService,
   ) {}
 
   async create(emails: Email[]): Promise<any> {
@@ -50,13 +52,26 @@ export class EmailsService {
     return await this.folderModel.insertMany(folders);
   }
 
-  async sync(token: string): Promise<number> {
-    this.eventsGateway.sendEvent('sync', {
-      value: 100,
+  async sync(token: string): Promise<number | any> {
+    const mailBoxData = await this.imapService.getMailBoxInfo();
+    mailBoxData.forEach((mailBox) => {
+      // if(mailBox.count > 0)
+      //     fetchPaginatedEmails(mailBox)
+      this.imapService.startListening(mailBox, console.log, console.log);
     });
-    await this.syncEmails(token);
-    await this.syncFolders(token);
-    return 1;
+
+    // return await this.outlookService.registerWebhook(token);
+
+    // await this.outlookService.connect();
+    // let x = await this.outlookService.fetchEmails();
+    // console.log(x)
+
+    // this.eventsGateway.sendEvent('sync', {
+    //   value: 100,
+    // });
+    // await this.syncEmails(token);
+    // await this.syncFolders(token);
+    // return 1;
   }
 
   async syncEmails(token: string): Promise<number> {
@@ -94,7 +109,7 @@ export class EmailsService {
 
   async handleNotification(req: Request) {
     try {
-      await this.outlookService.handleNotification(req);
+      return await this.outlookService.handleNotification(req);
     } catch (error) {
       throw new InternalServerErrorException();
     }

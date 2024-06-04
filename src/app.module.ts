@@ -8,6 +8,7 @@ import { EmailsModule } from './emails/emails.module';
 import { join } from 'path';
 import { AuthModule } from './auth/auth.module';
 import { EventsModule } from './events/events.module';
+import { ImapModule } from './imap/imap.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { EventsModule } from './events/events.module';
     EmailsModule,
     AuthModule,
     EventsModule,
+    ImapModule,
   ],
   // controllers: [AppController],
   providers: [AppService],

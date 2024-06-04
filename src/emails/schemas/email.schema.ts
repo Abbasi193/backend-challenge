@@ -27,7 +27,7 @@ export class Email {
   externalId: string;
 
   @Prop()
-  externalUpdatedAt: string;
+  date: string;
 }
 
 export const EmailSchema = SchemaFactory.createForClass(Email);

@@ -66,7 +66,7 @@ export class OutlookService {
           ),
           isRead: email.isRead,
           externalId: email.id,
-          externalUpdatedAt: email.lastModifiedDateTime,
+          date: email.lastModifiedDateTime,
         };
       } catch (error) {}
     });
@@ -118,7 +118,7 @@ export class OutlookService {
       ),
       isRead: email.isRead,
       externalId: email.id,
-      externalUpdatedAt: email.lastModifiedDateTime,
+      date: email.lastModifiedDateTime,
     };
   }
 

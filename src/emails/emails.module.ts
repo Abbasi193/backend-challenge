@@ -6,6 +6,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { OutlookModule } from 'src/outlook/outlook.module';
 import { Folder, FolderSchema } from './schemas/folder.schema';
 import { EventsModule } from 'src/events/events.module';
+import { ImapModule } from 'src/imap/imap.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { EventsModule } from 'src/events/events.module';
     ]),
     forwardRef(() => OutlookModule),
     EventsModule,
+    ImapModule,
   ],
   controllers: [EmailsController],
   providers: [EmailsService],

@@ -16,6 +16,10 @@ export class OutlookService extends BaseEmailProvider {
     return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${process.env.CLIENT_ID}&response_type=code&redirect_uri=${process.env.REDIRECT_URI}&scope=${scope}`;
   }
 
+  getImapHost(): string {
+    return 'imap-mail.outlook.com';
+  }
+
   async getToken(code: string, type: string): Promise<any> {
     const scope =
       type == 'graph'
@@ -121,6 +125,7 @@ export class OutlookService extends BaseEmailProvider {
     try {
       const date = new Date();
       date.setDate(date.getDate() + 6);
+
       const response = await axios.post(
         `https://graph.microsoft.com/v1.0/subscriptions`,
         {

@@ -58,6 +58,7 @@ export class AuthService {
   async signIn(signInDto: SignInDto): Promise<any> {
     const { email, password } = signInDto;
     const user = await this.userModel.findOne({ email });
+
     if (!user || !(await argon2.verify(user.password, password))) {
       throw new UnauthorizedException();
     }

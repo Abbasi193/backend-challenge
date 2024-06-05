@@ -16,4 +16,10 @@ export abstract class BaseEmailProvider {
     token: string,
     emailAccount: string,
   ): Promise<string>;
+
+  abstract getAuthURL(type: string): string;
+
+  abstract getImapHost(): string;
+
+  abstract getToken(code: string, type: string): Promise<any>;
 }

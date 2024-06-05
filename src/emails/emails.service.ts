@@ -72,7 +72,7 @@ export class EmailsService {
           user: emailAccount,
           password: '',
           xoauth2: btoa(`user=${emailAccount}\x01auth=Bearer ${token}\x01\x01`),
-          host: 'imap-mail.outlook.com',
+          host: this.outlookService.getImapHost(),
           port: 993,
           tls: true,
           authTimeout: 3000,
@@ -95,9 +95,11 @@ export class EmailsService {
     imapConfig: ImapSimpleOptions,
   ) {
     let mailBoxes = await this.imapService.getMailBoxInfo(imapConfig);
+
     mailBoxes = mailBoxes.map((e) => {
       return { ...e, emailAccount, userId: user.id };
     });
+
     await this.createMailBox(mailBoxes);
   }
 
@@ -123,7 +125,9 @@ export class EmailsService {
                 userId: user.id,
               };
             });
+
             await this.create(emails);
+
             this.eventsGateway.sendEvent('fetched', {
               value: emails.length,
             });
@@ -146,6 +150,7 @@ export class EmailsService {
         mailBox,
         async (email) => {
           await this.delete(email.externalId);
+
           await this.create([
             {
               ...email,
@@ -154,6 +159,7 @@ export class EmailsService {
               userId: user.id,
             },
           ]);
+
           this.eventsGateway.sendEvent('created', {
             value: email.externalId,
           });
@@ -165,6 +171,7 @@ export class EmailsService {
             mailBoxId: mailBox._id.toString(),
             userId: user.id,
           });
+
           this.eventsGateway.sendEvent('updated', {
             value: email.externalId,
           });
@@ -180,10 +187,13 @@ export class EmailsService {
   ): Promise<number> {
     return await runWithBottleneck(async (index) => {
       let emails = await this.outlookService.findEmails(token, index);
+
       emails = emails.map((e) => {
         return { ...e, emailAccount, userId: user.id };
       });
+
       await this.create(emails);
+
       this.eventsGateway.sendEvent('fetched', {
         value: emails.length,
       });
@@ -198,9 +208,11 @@ export class EmailsService {
   ): Promise<number> {
     return await runWithBottleneck(async (index) => {
       let mailBoxes = await this.outlookService.findMailBoxes(token, index);
+
       mailBoxes = mailBoxes.map((e) => {
         return { ...e, emailAccount, userId: user.id };
       });
+
       await this.createMailBox(mailBoxes);
       return mailBoxes.length;
     });
@@ -239,11 +251,13 @@ export class EmailsService {
           accessToken,
           resourceId,
         );
+
         await this.update(resourceId, {
           ...email,
           emailAccount: emailAccount,
           userId: userId,
         });
+
         this.eventsGateway.sendEvent('updated', {
           value: resourceId,
         });
@@ -252,14 +266,17 @@ export class EmailsService {
           accessToken,
           resourceId,
         );
+
         await this.create([
           { ...email, emailAccount: emailAccount, userId: userId },
         ]);
+
         this.eventsGateway.sendEvent('created', {
           value: resourceId,
         });
       } else if (changeType == 'deleted') {
         await this.delete(resourceId);
+
         this.eventsGateway.sendEvent('deleted', {
           value: resourceId,
         });

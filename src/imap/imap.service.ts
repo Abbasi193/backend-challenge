@@ -23,6 +23,7 @@ export class ImapService {
       connection.on('end', () => {
         console.log('IMAP Connection ended');
       });
+
       if (mailBox) {
         await connection.openBox(mailBox);
         console.log('Connected to INBOX...');
@@ -137,10 +138,12 @@ export class ImapService {
 
     await run(async (itemCount) => {
       if (itemCount > mailBox.totalItemCount) return 0;
+
       const emails = await this.getEmails(connection, [
         'ALL',
         `${Math.max(itemCount, 1)}:${Math.min(itemCount + PAGE_SIZE, mailBox.totalItemCount)}`,
       ]);
+
       await callback(emails);
       return emails.length;
     });
@@ -157,12 +160,14 @@ export class ImapService {
       data.push(await connection.openBox(mailBox));
       await connection.closeBox(false);
     }
+
     data = data.map((e: any) => {
       return {
         displayName: e.name,
         totalItemCount: e.messages.total,
       };
     });
+
     await connection.end();
 
     return data;

@@ -32,6 +32,7 @@ export class AuthService {
       tokenDto.code,
       tokenDto.type,
     );
+
     await this.integrationModel.create({
       accessToken: access_token,
       email,
@@ -39,7 +40,8 @@ export class AuthService {
       provider: tokenDto.provider,
       type: tokenDto.type,
     });
-    await this.emailService.setup(access_token, tokenDto.type, email, user);
+
+    this.emailService.setup(access_token, tokenDto.type, email, user).catch();
   }
 
   async signUp(signUpDto: SignUpDto): Promise<any> {

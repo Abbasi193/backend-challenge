@@ -52,18 +52,60 @@ export class EmailsService {
     return await this.mailBoxModel.insertMany(mailBoxes);
   }
 
+  async find(id: string, user: UserDocument): Promise<any> {
+    const email = await this.emailModel.findOne({
+      userId: user.id,
+      externalId: id,
+    });
+    if (!email) {
+      throw new NotFoundException();
+    }
+    return email;
+  }
+
+  async findAll(emailAccount: string, user: UserDocument): Promise<any> {
+    return await this.emailModel.find({
+      userId: user.id,
+      emailAccount: emailAccount,
+    });
+  }
+
+  async findMailBoxes(emailAccount: string, user: UserDocument): Promise<any> {
+    return await this.mailBoxModel.find({
+      userId: user.id,
+      emailAccount: emailAccount,
+    });
+  }
+
+  async findIntegration(user: UserDocument): Promise<any> {
+    const integration = await this.integrationModel.findOne({
+      userId: user.id,
+    });
+    if (!integration) {
+      throw new NotFoundException();
+    }
+    return {
+      email: integration.email,
+      userId: integration.userId,
+      type: integration.type,
+      provider: integration.provider,
+    };
+  }
+
   async setup(
     token: string,
     type: string,
     emailAccount: string,
     user: UserDocument,
   ) {
-    if (type == 'graph') {
+    if (type == 'REST_API') {
       try {
         await this.syncMailBoxes(token, emailAccount, user);
         await this.syncEmails(token, emailAccount, user);
         await this.registerWebhook(token, emailAccount);
+        this.eventsGateway.sendEvent('completed', {});
       } catch (e) {
+        this.eventsGateway.sendEvent('failed', {});
         console.log(e.response.data);
       }
     } else {
@@ -79,14 +121,15 @@ export class EmailsService {
         },
       };
       await this.syncMailBoxesImap(emailAccount, user, imapConfig);
-      this.syncEmailsImap(emailAccount, user, imapConfig);
+      this.syncEmailsImap(emailAccount, user, imapConfig)
+        .then(() => {
+          this.eventsGateway.sendEvent('completed', {});
+        })
+        .catch(() => {
+          this.eventsGateway.sendEvent('failed', {});
+        });
       this.listenImap(emailAccount, user, imapConfig);
     }
-  }
-
-  async sync(token: string, user: UserDocument): Promise<number | any> {
-    // await this.setup(token, 'graph', 'mail@hotmail.com');
-    await this.syncEmails(token, 'abdullahshahidabbasi@hotmail.com', user);
   }
 
   private async syncMailBoxesImap(
@@ -240,49 +283,45 @@ export class EmailsService {
     changeType: string,
     emailAccount: string,
   ) {
-    try {
-      const integration: any = await this.integrationModel.findOne({
-        email: emailAccount,
+    const integration: any = await this.integrationModel.findOne({
+      email: emailAccount,
+    });
+    const { accessToken, userId } = integration;
+
+    if (changeType == 'updated') {
+      const email = await this.outlookService.findEmail(
+        accessToken,
+        resourceId,
+      );
+
+      await this.update(resourceId, {
+        ...email,
+        emailAccount: emailAccount,
+        userId: userId,
       });
-      const { accessToken, userId } = integration.accessToken;
 
-      if (changeType == 'updated') {
-        const email = await this.outlookService.findEmail(
-          accessToken,
-          resourceId,
-        );
+      this.eventsGateway.sendEvent('updated', {
+        value: resourceId,
+      });
+    } else if (changeType == 'created') {
+      const email = await this.outlookService.findEmail(
+        accessToken,
+        resourceId,
+      );
 
-        await this.update(resourceId, {
-          ...email,
-          emailAccount: emailAccount,
-          userId: userId,
-        });
+      await this.create([
+        { ...email, emailAccount: emailAccount, userId: userId },
+      ]);
 
-        this.eventsGateway.sendEvent('updated', {
-          value: resourceId,
-        });
-      } else if (changeType == 'created') {
-        const email = await this.outlookService.findEmail(
-          accessToken,
-          resourceId,
-        );
+      this.eventsGateway.sendEvent('created', {
+        value: resourceId,
+      });
+    } else if (changeType == 'deleted') {
+      await this.delete(resourceId);
 
-        await this.create([
-          { ...email, emailAccount: emailAccount, userId: userId },
-        ]);
-
-        this.eventsGateway.sendEvent('created', {
-          value: resourceId,
-        });
-      } else if (changeType == 'deleted') {
-        await this.delete(resourceId);
-
-        this.eventsGateway.sendEvent('deleted', {
-          value: resourceId,
-        });
-      }
-    } catch (error) {
-      console.log(error.message);
+      this.eventsGateway.sendEvent('deleted', {
+        value: resourceId,
+      });
     }
   }
 

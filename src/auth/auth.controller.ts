@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Query,
+  UseGuards,
+  Redirect,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignUpDto } from './dto/signup.dto';
 import { SignInDto } from './dto/signin.dto';
@@ -12,17 +20,19 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Get('url')
+  @Redirect()
   getAuthURL(@Query('type') type: string, @Query('provider') provider: string) {
-    return this.authService.getAuthURL(type, provider);
+    const url = this.authService.getAuthURL(type, provider);
+    return { url };
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('connect')
-  connectEmail(
+  async connectEmail(
     @UserDecorator() user: UserDocument,
     @Body() tokenDto: TokenDto,
   ) {
-    return this.authService.connectEmail(user, tokenDto);
+    return await this.authService.connectEmail(user, tokenDto);
   }
 
   @Post('signup')

@@ -1,7 +1,6 @@
 import {
   Controller,
   Get,
-  Headers,
   HttpCode,
   Param,
   Post,
@@ -21,11 +20,32 @@ export class EmailsController {
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  findAll(
-    @Headers('authorization') token: string,
+  async findAll(
+    @Query('emailAccount') emailAccount: string,
     @UserDecorator() user: UserDocument,
   ) {
-    return this.emailsService.sync(token.split(' ')[1], user);
+    return await this.emailsService.findAll(emailAccount, user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('mailboxes')
+  async findMailBoxes(
+    @Query('emailAccount') emailAccount: string,
+    @UserDecorator() user: UserDocument,
+  ) {
+    return await this.emailsService.findMailBoxes(emailAccount, user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('integrations')
+  async findIntegration(@UserDecorator() user: UserDocument) {
+    return await this.emailsService.findIntegration(user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id')
+  async findOne(@Param('id') id: string, @UserDecorator() user: UserDocument) {
+    return await this.emailsService.find(id, user);
   }
 
   @HttpCode(200)

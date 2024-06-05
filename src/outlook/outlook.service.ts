@@ -9,11 +9,11 @@ import { BaseEmailProvider } from 'src/common/email-provider';
 export class OutlookService extends BaseEmailProvider {
   getAuthURL(type: string): string {
     const scope =
-      type == 'graph'
+      type == 'REST_API'
         ? 'openid%20email%20Mail.Read%20Mail.ReadBasic%20Mail.ReadBasic.Shared%20User.Read'
         : 'openid%20email%20https://outlook.office.com/IMAP.AccessAsUser.All';
 
-    return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${process.env.CLIENT_ID}&response_type=code&redirect_uri=${process.env.REDIRECT_URI}&scope=${scope}`;
+    return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${process.env.CLIENT_ID}&response_type=code&redirect_uri=${process.env.REDIRECT_URI}&scope=${scope}&state=${type}`;
   }
 
   getImapHost(): string {
@@ -22,7 +22,7 @@ export class OutlookService extends BaseEmailProvider {
 
   async getToken(code: string, type: string): Promise<any> {
     const scope =
-      type == 'graph'
+      type == 'REST_API'
         ? 'openid email Mail.Read Mail.ReadBasic Mail.ReadBasic.Shared User.Read'
         : 'openid email https://outlook.office.com/IMAP.AccessAsUser.All';
 

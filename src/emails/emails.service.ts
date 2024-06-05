@@ -103,9 +103,9 @@ export class EmailsService {
         await this.syncMailBoxes(token, emailAccount, user);
         await this.syncEmails(token, emailAccount, user);
         await this.registerWebhook(token, emailAccount);
-        this.eventsGateway.sendEvent('completed', {});
+        this.eventsGateway.sendEvent('completed', user.id, {});
       } catch (e) {
-        this.eventsGateway.sendEvent('failed', {});
+        this.eventsGateway.sendEvent('failed', user.id, {});
         console.log(e.response.data);
       }
     } else {
@@ -123,10 +123,10 @@ export class EmailsService {
       await this.syncMailBoxesImap(emailAccount, user, imapConfig);
       this.syncEmailsImap(emailAccount, user, imapConfig)
         .then(() => {
-          this.eventsGateway.sendEvent('completed', {});
+          this.eventsGateway.sendEvent('completed', user.id, {});
         })
         .catch((error) => {
-          this.eventsGateway.sendEvent('failed', {});
+          this.eventsGateway.sendEvent('failed', user.id, {});
           console.log(error);
         });
       this.listenImap(emailAccount, user, imapConfig)
@@ -176,7 +176,7 @@ export class EmailsService {
 
             await this.create(emails);
 
-            this.eventsGateway.sendEvent('fetched', {
+            this.eventsGateway.sendEvent('fetched', user.id, {
               value: emails.length,
             });
           },
@@ -208,7 +208,7 @@ export class EmailsService {
             },
           ]);
 
-          this.eventsGateway.sendEvent('created', {
+          this.eventsGateway.sendEvent('created', user.id, {
             value: email.externalId,
           });
         },
@@ -220,7 +220,7 @@ export class EmailsService {
             userId: user.id,
           });
 
-          this.eventsGateway.sendEvent('updated', {
+          this.eventsGateway.sendEvent('updated', user.id, {
             value: email.externalId,
           });
         },
@@ -242,7 +242,7 @@ export class EmailsService {
 
       await this.create(emails);
 
-      this.eventsGateway.sendEvent('fetched', {
+      this.eventsGateway.sendEvent('fetched', user.id, {
         value: emails.length,
       });
       return emails.length;
@@ -305,7 +305,7 @@ export class EmailsService {
         userId: userId,
       });
 
-      this.eventsGateway.sendEvent('updated', {
+      this.eventsGateway.sendEvent('updated', userId, {
         value: resourceId,
       });
     } else if (changeType == 'created') {
@@ -318,13 +318,13 @@ export class EmailsService {
         { ...email, emailAccount: emailAccount, userId: userId },
       ]);
 
-      this.eventsGateway.sendEvent('created', {
+      this.eventsGateway.sendEvent('created', userId, {
         value: resourceId,
       });
     } else if (changeType == 'deleted') {
       await this.delete(resourceId);
 
-      this.eventsGateway.sendEvent('deleted', {
+      this.eventsGateway.sendEvent('deleted', userId, {
         value: resourceId,
       });
     }
@@ -334,7 +334,7 @@ export class EmailsService {
     try {
       return await this.outlookService.registerWebhook(token, emailAccount);
     } catch (error) {
-      throw new InternalServerErrorException();
+      console.log(error.message);
     }
   }
 }

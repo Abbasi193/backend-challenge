@@ -14,9 +14,9 @@ export class EventsGateway {
   @UseGuards(JwtAuthGuard)
   async handleConnection(client: Socket) {
     try {
-      const token = client.handshake.headers.authorization?.split(' ')[1];
-      if (!token) throw Error('Unauthorized');
-      await this.jwtService.verify(token);
+      const userId = await this.getUserId(client);
+
+      client.join(userId);
 
       console.log('Client connected:', client.id);
     } catch (error) {
@@ -24,11 +24,23 @@ export class EventsGateway {
     }
   }
 
-  handleDisconnect(client: Socket) {
-    console.log('Client disconnected:', client.id);
+  async getUserId(client: Socket) {
+    const token = client.handshake.headers.authorization?.split(' ')[1];
+    if (!token) throw Error('Unauthorized');
+    const payload = await this.jwtService.verify(token);
+    return payload.sub;
   }
 
-  sendEvent(event: string, data: any) {
-    this.server.emit(event, data);
+  async handleDisconnect(client: Socket) {
+    try {
+      const userId = await this.getUserId(client);
+      client.leave(userId);
+
+      console.log('Client disconnected:', client.id);
+    } catch (error) {}
+  }
+
+  sendEvent(event: string, userId: string, data: any) {
+    this.server.to(userId.toString()).emit(event, data);
   }
 }

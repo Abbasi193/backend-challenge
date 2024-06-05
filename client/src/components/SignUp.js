@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import LoadingScreen from './LoadingScreen';
 import apiService from '../services/apiService';
 
 const SignUp = () => {
@@ -30,41 +31,52 @@ const SignUp = () => {
     }
   };
   if (loading) {
-    return <p>Loading...</p>;
+    return <LoadingScreen text="Loading..." />;
   }
 
   return (
-    <>
-      <form onSubmit={handleSubmit}>
-        <h2>Sign Up</h2>
-        <input
-          type="text"
-          name="name"
-          value={userData.name}
-          onChange={handleChange}
-          placeholder="Name"
-          required
-        />
-        <input
-          type="email"
-          name="email"
-          value={userData.email}
-          onChange={handleChange}
-          placeholder="Email"
-          required
-        />
-        <input
-          type="password"
-          name="password"
-          value={userData.password}
-          onChange={handleChange}
-          placeholder="Password"
-          required
-        />
-        <button type="submit">Sign Up</button>
+    <div className="sign-in-container">
+      <form className="sign-in-form" onSubmit={handleSubmit}>
+        <h2 className="form-title">Sign Up</h2>
+        <div className="input-group">
+          <input
+            type="text"
+            name="name"
+            value={userData.name}
+            onChange={handleChange}
+            placeholder="Name"
+            required
+            className="input-field"
+          />
+        </div>
+        <div className="input-group">
+          <input
+            type="email"
+            name="email"
+            value={userData.email}
+            onChange={handleChange}
+            placeholder="Email"
+            required
+            className="input-field"
+          />
+        </div>
+        <div className="input-group">
+          <input
+            type="password"
+            name="password"
+            value={userData.password}
+            onChange={handleChange}
+            placeholder="Password"
+            required
+            className="input-field"
+          />
+        </div>
+        <button type="submit" className="submit-button">Sign Up</button>
       </form>
-      <p>Already have an account? <Link to="/signin">Sign In</Link></p>
-    </>
+      <p className="sign-in-link">
+        Already have an account? <Link to="/signin">Sign In</Link>
+      </p>
+    </div>
   );
 };
 

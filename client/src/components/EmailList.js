@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import apiService from '../services/apiService';
-import '../index.css';
+import './emailList.css';
 
 const EmailList = ({ emails, setEmails, emailAccount }) => {
   const [loading, setLoading] = useState(true);
@@ -39,22 +39,19 @@ const EmailList = ({ emails, setEmails, emailAccount }) => {
   }
 
   return (
-    <div>
-      <h2>Emails</h2>
-      <ul>
-        {emails.map((email) => (
-          <>
-            <li key={email.externalId} className={!email.isRead ? 'unread-email' : ''}>
-              <span>{email.subject}</span><br />
-              <span>From:{email.senderEmail}</span><br />
-              <span>Date:{new Date(email.date).toLocaleString()}</span><br />
-              <span>Mailbox: {mailBoxes.filter((mailBox) => {
-                return email.mailBoxId == mailBox._id || email.mailBoxId == mailBox.externalId
-              })[0]?.displayName}</span><br />
+    <div className="email-container">
+      <ul className="email-list">
+        {emails.map((email) => {
+          const mailBox = mailBoxes.find((mailBox) => email.mailBoxId === mailBox._id || email.mailBoxId === mailBox.externalId);
+          return (
+            <li key={email.externalId} className={`email-item ${!email.isRead ? 'unread-email' : ''}`}>
+              <span>{email.subject}</span>
+              <span>From: {email.senderEmail}</span>
+              <span className="date">Date: {new Date(email.date).toLocaleString()}</span>
+              <span className="mailbox">Mailbox: {mailBox?.displayName}</span>
             </li>
-            <br />
-          </>
-        ))}
+          );
+        })}
       </ul>
     </div>
   );

@@ -1,0 +1,41 @@
+.email-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 10px;
+    background-color: #f7f7f7;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .email-container h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 20px;
+    color: #333;
+  }
+  
+  .email-list {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  .email-item {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .email-item.unread-email {
+    background-color: #e0f7fa;
+  }
+  
+  .email-item span {
+    display: block;
+    margin-bottom: 5px;
+  }
+  
+  .email-item span.date,
+  .email-item span.mailbox {
+    font-size: 14px;
+    color: #555;
+  }
+  

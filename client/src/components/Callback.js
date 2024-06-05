@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import apiService from '../services/apiService';
 import { useNavigate } from 'react-router-dom';
-
+import LoadingScreen from './LoadingScreen';
 
 const Callback = () => {
   const location = useLocation();
@@ -40,7 +40,7 @@ const Callback = () => {
 
   return (
     <div>
-      <p>Processing authentication...</p>
+      <LoadingScreen text="Processing authentication..." />
     </div>
   );
 };

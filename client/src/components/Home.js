@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import EmailList from './EmailList'
 import apiService from '../services/apiService';
 import io from 'socket.io-client';
+import LoadingScreen from './LoadingScreen';
+import './home.css';
 
 const Home = () => {
   const location = useLocation();
@@ -56,6 +58,7 @@ const Home = () => {
       setCount((count) => {
         return (count + data.value)
       })
+      handleRefresh()
       console.log('fetched', data);
     });
 
@@ -130,44 +133,38 @@ const Home = () => {
   const user = apiService.getCurrentUser();
 
   if (loading) {
-    return <p>Loading...</p>;
+    return <LoadingScreen text="Loading..." />;
   }
 
   return (
-    <div>
+    <div className="welcome-container">
       <h2>Welcome {user?.email}</h2>
       <button onClick={handleSignOut}>Sign Out</button>
-      <br />
-      <br />
-      {isSyncing ? (
-        <>
+      {isSyncing && (
+        <div className="sync-info">
           <p>Syncing...</p>
           <p>{count} Emails synced</p>
-        </>
-      ) : null}
-      {integration == null ?
-        (
-          <>
-            <label htmlFor="connectType">Select Type: </label>
-            <select
-              id="connectType"
-              value={connectType}
-              onChange={(e) => setConnectType(e.target.value)}
-            >
-              <option value="IMAP">IMAP</option>
-              <option value="REST_API">REST_API</option>
-            </select>
-            <br />
-            <button onClick={handleConnect}>Connect with Outlook</button>
-          </>
-        ) :
-        <>
-
+        </div>
+      )}
+      {integration == null ? (
+        <div>
+          <label htmlFor="connectType">Protocol</label>
+          <select
+            id="connectType"
+            value={connectType}
+            onChange={(e) => setConnectType(e.target.value)}
+          >
+            <option value="IMAP">IMAP</option>
+            <option value="REST_API">REST_API</option>
+          </select><br/>
+          <button onClick={handleConnect}>Connect with Outlook</button>
+        </div>
+      ) : (
+        <div>
           <button onClick={handleRefresh}>Refresh</button>
           <EmailList key={key} emails={emails} setEmails={setEmails} emailAccount={integration.email} />
-        </>
-      }
-      <br />
+        </div>
+      )}
     </div>
   );
 };

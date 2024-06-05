@@ -182,6 +182,7 @@ export class ImapService {
       body: parsedBody.text,
       externalId: parsedHeader.messageId,
       emailAccount: '',
+      userId: '',
       subject: parsedHeader.subject,
       date: parsedHeader.date,
       recipientEmails: parsedHeader.to?.value?.map((v: any) => v.address),

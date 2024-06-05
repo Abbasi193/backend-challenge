@@ -15,6 +15,9 @@ export class Email {
   emailAccount: string;
 
   @Prop()
+  userId: string;
+
+  @Prop()
   senderEmail: string;
 
   @Prop()

@@ -11,7 +11,7 @@ export abstract class BaseEmailProvider {
     req: Request,
     callback: (resourceId: string, changeType: string) => Promise<void>,
   ): Promise<any>;
-  
+
   abstract registerWebhook(
     token: string,
     emailAccount: string,

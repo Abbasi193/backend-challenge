@@ -12,6 +12,9 @@ export class MailBox {
   emailAccount: string;
 
   @Prop()
+  userId: string;
+
+  @Prop()
   unreadItemCount: number;
 
   @Prop()

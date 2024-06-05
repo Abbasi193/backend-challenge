@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import axios from 'axios';
 import { Email } from 'src/emails/schemas/email.schema';
 import { MailBox } from 'src/emails/schemas/mailBox.schema';
@@ -61,19 +58,7 @@ export class OutlookService extends BaseEmailProvider {
     const { value } = response.data;
     return value.map((email: any) => {
       try {
-        return {
-          subject: email.subject,
-          body: email.bodyPreview,
-          emailAccount: '',
-          senderEmail: email.sender?.emailAddress?.address,
-          recipientEmails: email.toRecipients?.map(
-            (recipient: any) => recipient.emailAddress?.address,
-          ),
-          isRead: email.isRead,
-          externalId: email.id,
-          date: email.sentDateTime,
-          mailBoxId: email.parentFolderId,
-        };
+        return this.parseEmail(email);
       } catch (error) {}
     });
   }
@@ -112,11 +97,15 @@ export class OutlookService extends BaseEmailProvider {
       },
     );
     const email = response.data;
+    return this.parseEmail(email);
+  }
 
+  private parseEmail(email: any): Email {
     return {
       subject: email.subject,
       body: email.bodyPreview,
       emailAccount: '',
+      userId: '',
       senderEmail: email.sender?.emailAddress?.address,
       recipientEmails: email.toRecipients?.map(
         (recipient: any) => recipient.emailAddress?.address,

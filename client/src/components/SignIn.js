@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import apiService from '../services/apiService';
 
 const SignIn = () => {
+  const [loading, setLoading] = useState(false);
   const [userData, setUserData] = useState({
     email: '',
     password: '',
@@ -17,13 +18,19 @@ const SignIn = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      setLoading(true)
       await apiService.signin(userData);
       navigate('/');
     } catch (error) {
       console.error('Sign in error', error);
       alert('Sign in failed');
+    } finally {
+      setLoading(false)
     }
   };
+  if (loading) {
+    return <p>Loading...</p>;
+  }
 
   return (
     <>

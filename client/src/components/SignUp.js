@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import apiService from '../services/apiService';
 
 const SignUp = () => {
+  const [loading, setLoading] = useState(false);
   const [userData, setUserData] = useState({
     name: '',
     email: '',
@@ -18,13 +19,19 @@ const SignUp = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      setLoading(true)
       await apiService.signup(userData);
       navigate('/');
     } catch (error) {
       console.error('Sign up error', error);
       alert('Sign up failed');
+    } finally {
+      setLoading(false)
     }
   };
+  if (loading) {
+    return <p>Loading...</p>;
+  }
 
   return (
     <>

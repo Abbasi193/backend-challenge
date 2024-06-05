@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { OutlookService } from 'src/outlook/outlook.service';
 import { SignInDto } from './dto/signin.dto';
 import { User, UserDocument } from './schemas/user.schema';
@@ -41,7 +41,14 @@ export class AuthService {
       type: tokenDto.type,
     });
 
-    this.emailService.setup(access_token, tokenDto.type, email, user).catch();
+    this.emailService
+      .setup(access_token, tokenDto.type, email, user)
+      .then((res) => {
+        Logger.debug(res);
+      })
+      .catch((err) => {
+        Logger.error('Error:', err);
+      });
   }
 
   async signUp(signUpDto: SignUpDto): Promise<any> {

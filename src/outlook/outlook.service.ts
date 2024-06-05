@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import axios from 'axios';
 import { Email } from 'src/emails/schemas/email.schema';
 import { MailBox } from 'src/emails/schemas/mailBox.schema';
@@ -63,7 +63,9 @@ export class OutlookService extends BaseEmailProvider {
     return value.map((email: any) => {
       try {
         return this.parseEmail(email);
-      } catch (error) {}
+      } catch (error) {
+        Logger.error('Error:', error);
+      }
     });
   }
 
@@ -86,7 +88,9 @@ export class OutlookService extends BaseEmailProvider {
           totalItemCount: folder.totalItemCount,
           externalId: folder.id,
         };
-      } catch (error) {}
+      } catch (error) {
+        Logger.error('Error:', error);
+      }
     });
   }
 
@@ -144,7 +148,7 @@ export class OutlookService extends BaseEmailProvider {
       );
       return response.data;
     } catch (error) {
-      console.log(error.response.data);
+      Logger.log(error.response.data);
       throw error;
     }
   }

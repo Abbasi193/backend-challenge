@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -106,7 +107,7 @@ export class EmailsService {
         this.eventsGateway.sendEvent('completed', user.id, {});
       } catch (e) {
         this.eventsGateway.sendEvent('failed', user.id, {});
-        console.log(e.response.data);
+        Logger.log(e.response.data);
       }
     } else {
       const imapConfig: ImapSimpleOptions = {
@@ -127,12 +128,14 @@ export class EmailsService {
         })
         .catch((error) => {
           this.eventsGateway.sendEvent('failed', user.id, {});
-          console.log(error);
+          Logger.log(error);
         });
       this.listenImap(emailAccount, user, imapConfig)
-        .then(() => {})
+        .then((res) => {
+          Logger.debug(res)
+        })
         .catch((error) => {
-          console.log(error);
+          Logger.log(error);
         });
     }
   }
@@ -279,6 +282,7 @@ export class EmailsService {
         },
       );
     } catch (error) {
+      Logger.error('Error:', error);
       throw new InternalServerErrorException();
     }
   }
@@ -334,7 +338,7 @@ export class EmailsService {
     try {
       return await this.outlookService.registerWebhook(token, emailAccount);
     } catch (error) {
-      console.log(error.message);
+      Logger.log(error.message);
     }
   }
 }

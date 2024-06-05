@@ -1,7 +1,7 @@
 import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtAuthGuard } from 'src/auth/jwt/jwt-auth.guard';
-import { UseGuards } from '@nestjs/common';
+import { Logger, UseGuards } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
 @WebSocketGateway()
@@ -17,9 +17,9 @@ export class EventsGateway {
       const userId = await this.getUserId(client);
 
       client.join(userId);
-
-      console.log('Client connected:', client.id);
+      Logger.log('Client connected:', client.id);
     } catch (error) {
+      Logger.error('Error:', error);
       client.disconnect();
     }
   }
@@ -36,8 +36,10 @@ export class EventsGateway {
       const userId = await this.getUserId(client);
       client.leave(userId);
 
-      console.log('Client disconnected:', client.id);
-    } catch (error) {}
+      Logger.log('Client disconnected:', client.id);
+    } catch (error) {
+      Logger.error('Error:', error);
+    }
   }
 
   sendEvent(event: string, userId: string, data: any) {

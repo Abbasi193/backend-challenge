@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { connect, ImapSimpleOptions, ImapSimple } from 'imap-simple';
 import { Email } from 'src/emails/schemas/email.schema';
 import { MailBox } from 'src/emails/schemas/mailBox.schema';
@@ -17,21 +17,21 @@ export class ImapService {
       const connection = await connect(imapConfig);
 
       connection.on('error', (err) => {
-        console.error('IMAP Error:', err);
+        Logger.error('IMAP Error:', err);
       });
 
       connection.on('end', () => {
-        console.log('IMAP Connection ended');
+        Logger.log('IMAP Connection ended');
       });
 
       if (mailBox) {
         await connection.openBox(mailBox);
-        console.log('Connected to INBOX...');
+        Logger.log('Connected to INBOX...');
       }
 
       return connection;
     } catch (error) {
-      console.error('Failed to connect to IMAP server:', error);
+      Logger.error('Failed to connect to IMAP server:', error);
       throw error;
     }
   }
@@ -92,7 +92,9 @@ export class ImapService {
         .map((message) => {
           try {
             return this.parseEmail(message);
-          } catch (error) {}
+          } catch (error) {
+            Logger.error('Error:', error);
+          }
         })
         .filter((e: any) => e != null && e != undefined),
     );
@@ -115,14 +117,18 @@ export class ImapService {
       try {
         const emails = await this.getEmails(connection, ['RECENT']);
         await onMail(emails[0]);
-      } catch {}
+      } catch (error) {
+        Logger.error('Error:', error);
+      }
     });
 
     connection.on('update', async (seqno) => {
       try {
         const emails = await this.getEmails(connection, [`${seqno}:${seqno}`]);
         await onUpdate(emails[0]);
-      } catch {}
+      } catch (error) {
+        Logger.error('Error:', error);
+      }
     });
   }
 

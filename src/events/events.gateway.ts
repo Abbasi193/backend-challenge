@@ -1,10 +1,4 @@
-import {
-  WebSocketGateway,
-  WebSocketServer,
-  SubscribeMessage,
-  MessageBody,
-} from '@nestjs/websockets';
-import { EventsService } from './events.service';
+import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtAuthGuard } from 'src/auth/jwt/jwt-auth.guard';
 import { UseGuards } from '@nestjs/common';
@@ -15,10 +9,7 @@ export class EventsGateway {
   @WebSocketServer()
   server: Server;
 
-  constructor(
-    private readonly eventsService: EventsService,
-    private readonly jwtService: JwtService,
-  ) {}
+  constructor(private readonly jwtService: JwtService) {}
 
   @UseGuards(JwtAuthGuard)
   async handleConnection(client: Socket) {
@@ -39,11 +30,5 @@ export class EventsGateway {
 
   sendEvent(event: string, data: any) {
     this.server.emit(event, data);
-  }
-
-  @SubscribeMessage('findAllEvents')
-  findAll(@MessageBody() body: any) {
-    console.log(body);
-    return this.eventsService.findAll();
   }
 }

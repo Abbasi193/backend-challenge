@@ -125,10 +125,15 @@ export class EmailsService {
         .then(() => {
           this.eventsGateway.sendEvent('completed', {});
         })
-        .catch(() => {
+        .catch((error) => {
           this.eventsGateway.sendEvent('failed', {});
+          console.log(error);
         });
-      this.listenImap(emailAccount, user, imapConfig);
+      this.listenImap(emailAccount, user, imapConfig)
+        .then(() => {})
+        .catch((error) => {
+          console.log(error);
+        });
     }
   }
 

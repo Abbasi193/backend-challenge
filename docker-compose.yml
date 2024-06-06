@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - '3000:3000'
+    environment:
+      - CLIENT_ID=579460c2-0533-46b7-8ade-31f573cbea1f
+      - CLIENT_SECRET=w8C8Q~ERzNvmQ06V8H6doeVoKqTlA8UnQY2HPcZA
+      - REDIRECT_URI=http://localhost:3000/auth/callback
+      - JWT_SECRET=jwt_secret
+      - MONGODB_URI=mongodb://mongo:27017/nest
+      - CLIENT_STATE=secretClientState
+      - WEBHOOK_URL=https://eed5-182-180-6-247.ngrok-free.app
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:4.4
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:

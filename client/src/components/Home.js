@@ -127,7 +127,7 @@ const Home = () => {
   };
 
   const handleConnect = () => {
-    window.location.href = `/auth/url?type=${connectType}`;
+    window.location.href = `/api/auth/url?type=${connectType}`;
   };
 
   const user = apiService.getCurrentUser();

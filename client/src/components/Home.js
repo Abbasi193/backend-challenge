@@ -58,7 +58,6 @@ const Home = () => {
       setCount((count) => {
         return (count + data.value)
       })
-      handleRefresh()
       console.log('fetched', data);
     });
 
@@ -104,6 +103,7 @@ const Home = () => {
 
     socket.on('failed', (data) => {
       console.log('failed', data);
+      alert('Sync Failed');
     });
 
     socket.on('disconnect', () => {

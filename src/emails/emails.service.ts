@@ -18,7 +18,12 @@ import { ImapSimpleOptions } from 'imap-simple';
 import { Integration } from 'src/auth/schemas/integration.schema';
 import { runWithBottleneck } from 'src/common/utils/rate-limiter';
 import { UserDocument } from 'src/auth/schemas/user.schema';
+import { BaseEmailProvider } from 'src/common/email-provider';
 
+
+enum Providers {
+  OUTLOOK
+}
 @Injectable()
 export class EmailsService {
   constructor(
@@ -29,7 +34,14 @@ export class EmailsService {
     private readonly outlookService: OutlookService,
     private readonly eventsGateway: EventsGateway,
     private readonly imapService: ImapService,
-  ) {}
+  ) { }
+
+  private getService(provider: Providers): BaseEmailProvider {
+    switch (provider) {
+      case Providers.OUTLOOK:
+        return this.outlookService
+    }
+  }
 
   async create(emails: Email[]): Promise<any> {
     return await this.emailModel.insertMany(emails);
@@ -99,44 +111,47 @@ export class EmailsService {
     emailAccount: string,
     user: UserDocument,
   ) {
-    if (type == 'REST_API') {
-      try {
+    try {
+      if (type == 'REST_API') {
         await this.syncMailBoxes(token, emailAccount, user);
         await this.syncEmails(token, emailAccount, user);
         await this.registerWebhook(token, emailAccount);
         this.eventsGateway.sendEvent('completed', user.id, {});
-      } catch (e) {
-        this.eventsGateway.sendEvent('failed', user.id, {});
-        Logger.log(e.response.data);
+      } else {
+        const imapConfig: ImapSimpleOptions = {
+          imap: {
+            user: emailAccount,
+            password: '',
+            xoauth2: btoa(
+              `user=${emailAccount}\x01auth=Bearer ${token}\x01\x01`,
+            ),
+            host: this.getService(Providers.OUTLOOK).getImapHost(),
+            port: 993,
+            tls: true,
+            authTimeout: 3000,
+          },
+        };
+        await this.syncMailBoxesImap(emailAccount, user, imapConfig);
+        this.syncEmailsImap(emailAccount, user, imapConfig)
+          .then((res) => {
+            this.eventsGateway.sendEvent('completed', user.id, {});
+            Logger.debug(res);
+          })
+          .catch((error) => {
+            this.eventsGateway.sendEvent('failed', user.id, {});
+            Logger.log(error);
+          });
+        this.listenImap(emailAccount, user, imapConfig)
+          .then((res) => {
+            Logger.debug(res);
+          })
+          .catch((error) => {
+            Logger.log(error);
+          });
       }
-    } else {
-      const imapConfig: ImapSimpleOptions = {
-        imap: {
-          user: emailAccount,
-          password: '',
-          xoauth2: btoa(`user=${emailAccount}\x01auth=Bearer ${token}\x01\x01`),
-          host: this.outlookService.getImapHost(),
-          port: 993,
-          tls: true,
-          authTimeout: 3000,
-        },
-      };
-      await this.syncMailBoxesImap(emailAccount, user, imapConfig);
-      this.syncEmailsImap(emailAccount, user, imapConfig)
-        .then(() => {
-          this.eventsGateway.sendEvent('completed', user.id, {});
-        })
-        .catch((error) => {
-          this.eventsGateway.sendEvent('failed', user.id, {});
-          Logger.log(error);
-        });
-      this.listenImap(emailAccount, user, imapConfig)
-        .then((res) => {
-          Logger.debug(res)
-        })
-        .catch((error) => {
-          Logger.log(error);
-        });
+    } catch (e) {
+      this.eventsGateway.sendEvent('failed', user.id, {});
+      Logger.log(e.response.data);
     }
   }
 
@@ -158,33 +173,35 @@ export class EmailsService {
     emailAccount: string,
     user: UserDocument,
     imapConfig: ImapSimpleOptions,
-  ): Promise<void> {
+  ): Promise<any> {
     const mailBoxData: HydratedDocument<MailBox>[] =
       await this.mailBoxModel.find();
 
-    mailBoxData.forEach((mailBox) => {
-      if (mailBox.totalItemCount > 0)
-        this.imapService.fetchPaginatedEmails(
-          imapConfig,
-          mailBox,
-          async (emails) => {
-            emails = emails.map((e) => {
-              return {
-                ...e,
-                emailAccount,
-                mailBoxId: mailBox._id.toString(),
-                userId: user.id,
-              };
-            });
+    return await Promise.allSettled(
+      mailBoxData.map((mailBox) => {
+        if (mailBox.totalItemCount > 0) {
+          return this.imapService.fetchPaginatedEmails(
+            imapConfig,
+            mailBox,
+            async (emails) => {
+              emails = emails.map((e) => {
+                return {
+                  ...e,
+                  emailAccount,
+                  mailBoxId: mailBox._id.toString(),
+                  userId: user.id,
+                };
+              });
 
-            await this.create(emails);
-
-            this.eventsGateway.sendEvent('fetched', user.id, {
-              value: emails.length,
-            });
-          },
-        );
-    });
+              await this.create(emails);
+              this.eventsGateway.sendEvent('fetched', user.id, {
+                value: emails.length,
+              });
+            },
+          );
+        }
+      }),
+    );
   }
 
   private async listenImap(
@@ -195,40 +212,42 @@ export class EmailsService {
     const mailBoxData: HydratedDocument<MailBox>[] =
       await this.mailBoxModel.find();
 
-    mailBoxData.forEach((mailBox) => {
-      this.imapService.startListening(
-        imapConfig,
-        mailBox,
-        async (email) => {
-          await this.delete(email.externalId);
+    await Promise.allSettled(
+      mailBoxData.map((mailBox) => {
+        this.imapService.startListening(
+          imapConfig,
+          mailBox,
+          async (email) => {
+            await this.delete(email.externalId);
 
-          await this.create([
-            {
+            await this.create([
+              {
+                ...email,
+                emailAccount,
+                mailBoxId: mailBox._id.toString(),
+                userId: user.id,
+              },
+            ]);
+
+            this.eventsGateway.sendEvent('created', user.id, {
+              value: email.externalId,
+            });
+          },
+          async (email) => {
+            await this.update(email.externalId, {
               ...email,
               emailAccount,
               mailBoxId: mailBox._id.toString(),
               userId: user.id,
-            },
-          ]);
+            });
 
-          this.eventsGateway.sendEvent('created', user.id, {
-            value: email.externalId,
-          });
-        },
-        async (email) => {
-          await this.update(email.externalId, {
-            ...email,
-            emailAccount,
-            mailBoxId: mailBox._id.toString(),
-            userId: user.id,
-          });
-
-          this.eventsGateway.sendEvent('updated', user.id, {
-            value: email.externalId,
-          });
-        },
-      );
-    });
+            this.eventsGateway.sendEvent('updated', user.id, {
+              value: email.externalId,
+            });
+          },
+        );
+      }),
+    );
   }
 
   private async syncEmails(
@@ -237,7 +256,7 @@ export class EmailsService {
     user: UserDocument,
   ): Promise<number> {
     return await runWithBottleneck(async (index) => {
-      let emails = await this.outlookService.findEmails(token, index);
+      let emails = await this.getService(Providers.OUTLOOK).findEmails(token, index);
 
       emails = emails.map((e) => {
         return { ...e, emailAccount, userId: user.id };
@@ -258,7 +277,7 @@ export class EmailsService {
     user: UserDocument,
   ): Promise<number> {
     return await runWithBottleneck(async (index) => {
-      let mailBoxes = await this.outlookService.findMailBoxes(token, index);
+      let mailBoxes = await this.getService(Providers.OUTLOOK).findMailBoxes(token, index);
 
       mailBoxes = mailBoxes.map((e) => {
         return { ...e, emailAccount, userId: user.id };
@@ -275,7 +294,7 @@ export class EmailsService {
     emailAccount: string,
   ) {
     try {
-      return await this.outlookService.handleNotification(
+      return await this.getService(Providers.OUTLOOK).handleNotification(
         req,
         async (resourceId, changeType) => {
           return await this.handleChange(resourceId, changeType, emailAccount);
@@ -295,10 +314,12 @@ export class EmailsService {
     const integration: any = await this.integrationModel.findOne({
       email: emailAccount,
     });
+
+    if (!integration) return;
     const { accessToken, userId } = integration;
 
     if (changeType == 'updated') {
-      const email = await this.outlookService.findEmail(
+      const email = await this.getService(Providers.OUTLOOK).findEmail(
         accessToken,
         resourceId,
       );
@@ -313,7 +334,7 @@ export class EmailsService {
         value: resourceId,
       });
     } else if (changeType == 'created') {
-      const email = await this.outlookService.findEmail(
+      const email = await this.getService(Providers.OUTLOOK).findEmail(
         accessToken,
         resourceId,
       );
@@ -336,7 +357,7 @@ export class EmailsService {
 
   private async registerWebhook(token: string, emailAccount: string) {
     try {
-      return await this.outlookService.registerWebhook(token, emailAccount);
+      return await this.getService(Providers.OUTLOOK).registerWebhook(token, emailAccount);
     } catch (error) {
       Logger.log(error.message);
     }

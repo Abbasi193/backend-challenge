@@ -1,9 +1,7 @@
 import axios from 'axios';
 
-export const API_URL = 'http://localhost:4000';
-
 const connect = async (data) => {
-  const response = await axios.post(`${API_URL}/auth/connect`, data, {
+  const response = await axios.post(`/api/auth/connect`, data, {
     headers: {
       'Authorization': `Bearer ${getToken()}`
     }
@@ -12,7 +10,7 @@ const connect = async (data) => {
 };
 
 const fetchEmails = async (data) => {
-  const response = await axios.get(`${API_URL}/emails/`, {
+  const response = await axios.get(`/api/emails/`, {
     headers: {
       'Authorization': `Bearer ${getToken()}`
     },
@@ -22,7 +20,7 @@ const fetchEmails = async (data) => {
 };
 
 const fetchEmail = async (id) => {
-  const response = await axios.get(`${API_URL}/emails/${id}`, {
+  const response = await axios.get(`/api/emails/${id}`, {
     headers: {
       'Authorization': `Bearer ${getToken()}`
     }
@@ -31,7 +29,7 @@ const fetchEmail = async (id) => {
 };
 
 const fetchIntegration = async () => {
-  const response = await axios.get(`${API_URL}/emails/integrations`, {
+  const response = await axios.get(`/api/emails/integrations`, {
     headers: {
       'Authorization': `Bearer ${getToken()}`
     }
@@ -40,7 +38,7 @@ const fetchIntegration = async () => {
 };
 
 const fetchMailBoxes = async (data) => {
-  const response = await axios.get(`${API_URL}/emails/mailboxes/`, {
+  const response = await axios.get(`/api/emails/mailboxes/`, {
     headers: {
       'Authorization': `Bearer ${getToken()}`
     },
@@ -50,7 +48,7 @@ const fetchMailBoxes = async (data) => {
 };
 
 const signup = async (data) => {
-  const response = await axios.post(`${API_URL}/auth/signup`, data);
+  const response = await axios.post(`/api/auth/signup`, data);
   if (response.data.token) {
     localStorage.setItem('user', JSON.stringify(response.data));
   }
@@ -58,7 +56,7 @@ const signup = async (data) => {
 };
 
 const signin = async (data) => {
-  const response = await axios.post(`${API_URL}/auth/signin`, data);
+  const response = await axios.post(`/api/auth/signin`, data);
   if (response.data.token) {
     localStorage.setItem('user', JSON.stringify(response.data));
   }
@@ -90,7 +88,6 @@ const authService = {
   signin,
   signout,
   getCurrentUser,
-  API_URL,
   fetchEmails,
   fetchEmail,
   fetchIntegration,

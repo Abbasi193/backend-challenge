@@ -15,7 +15,7 @@ import { JwtModule } from '@nestjs/jwt';
   imports: [
     ConfigModule.forRoot(),
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'public'),
+      rootPath: join(__dirname, '..', 'client/build'),
       exclude: ['/api/(.*)'],
     }),
     MongooseModule.forRoot(
@@ -32,7 +32,6 @@ import { JwtModule } from '@nestjs/jwt';
       signOptions: { expiresIn: '60m' },
     }),
   ],
-  // controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}

@@ -44,7 +44,7 @@ const Home = () => {
       setIsSyncing(true);
     }
 
-    socket = io(`${apiService.API_URL}`, {
+    socket = io(`/`, {
       extraHeaders: {
         Authorization: `Bearer ${apiService.getToken()}`
       }
@@ -127,7 +127,7 @@ const Home = () => {
   };
 
   const handleConnect = () => {
-    window.location.href = `${apiService.API_URL}/auth/url?type=${connectType}`;
+    window.location.href = `/auth/url?type=${connectType}`;
   };
 
   const user = apiService.getCurrentUser();

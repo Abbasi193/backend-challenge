@@ -22,11 +22,10 @@ const SignUp = () => {
     try {
       setLoading(true)
       await apiService.signup(userData);
-      navigate('/');
+      window.location.href = '/';
     } catch (error) {
       console.error('Sign up error', error);
       alert('Sign up failed');
-    } finally {
       setLoading(false)
     }
   };

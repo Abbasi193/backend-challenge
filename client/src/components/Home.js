@@ -12,7 +12,7 @@ const Home = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [emails, setEmails] = useState([]);
   const [count, setCount] = useState(0);
-  const [connectType, setConnectType] = useState('REST_API');
+  const [connectType, setConnectType] = useState('IMAP');
   let socket = null;
   const [loading, setLoading] = useState(true);
   const [integration, setIntegration] = useState();

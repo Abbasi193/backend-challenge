@@ -20,9 +20,8 @@ import { runWithBottleneck } from 'src/common/utils/rate-limiter';
 import { UserDocument } from 'src/auth/schemas/user.schema';
 import { BaseEmailProvider } from 'src/common/email-provider';
 
-
 enum Providers {
-  OUTLOOK
+  OUTLOOK,
 }
 @Injectable()
 export class EmailsService {
@@ -34,12 +33,12 @@ export class EmailsService {
     private readonly outlookService: OutlookService,
     private readonly eventsGateway: EventsGateway,
     private readonly imapService: ImapService,
-  ) { }
+  ) {}
 
   private getService(provider: Providers): BaseEmailProvider {
     switch (provider) {
       case Providers.OUTLOOK:
-        return this.outlookService
+        return this.outlookService;
     }
   }
 
@@ -256,7 +255,10 @@ export class EmailsService {
     user: UserDocument,
   ): Promise<number> {
     return await runWithBottleneck(async (index) => {
-      let emails = await this.getService(Providers.OUTLOOK).findEmails(token, index);
+      let emails = await this.getService(Providers.OUTLOOK).findEmails(
+        token,
+        index,
+      );
 
       emails = emails.map((e) => {
         return { ...e, emailAccount, userId: user.id };
@@ -277,7 +279,10 @@ export class EmailsService {
     user: UserDocument,
   ): Promise<number> {
     return await runWithBottleneck(async (index) => {
-      let mailBoxes = await this.getService(Providers.OUTLOOK).findMailBoxes(token, index);
+      let mailBoxes = await this.getService(Providers.OUTLOOK).findMailBoxes(
+        token,
+        index,
+      );
 
       mailBoxes = mailBoxes.map((e) => {
         return { ...e, emailAccount, userId: user.id };
@@ -357,7 +362,10 @@ export class EmailsService {
 
   private async registerWebhook(token: string, emailAccount: string) {
     try {
-      return await this.getService(Providers.OUTLOOK).registerWebhook(token, emailAccount);
+      return await this.getService(Providers.OUTLOOK).registerWebhook(
+        token,
+        emailAccount,
+      );
     } catch (error) {
       Logger.log(error.message);
     }

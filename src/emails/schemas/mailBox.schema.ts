@@ -8,7 +8,7 @@ export class MailBox {
   @Prop()
   displayName: string;
 
-  @Prop()
+  @Prop({ index: true })
   emailAccount: string;
 
   @Prop()

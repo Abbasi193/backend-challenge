@@ -5,7 +5,7 @@ import { MailBox } from 'src/emails/schemas/mailBox.schema';
 export abstract class BaseEmailProvider {
   abstract findEmails(token: string, skip: number): Promise<Email[]>;
 
-  abstract findEmail(token: string, id: string): Promise<Email>
+  abstract findEmail(token: string, id: string): Promise<Email>;
 
   abstract findMailBoxes(token: string, skip: number): Promise<MailBox[]>;
 

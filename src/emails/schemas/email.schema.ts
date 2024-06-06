@@ -11,7 +11,7 @@ export class Email {
   @Prop()
   body: string;
 
-  @Prop()
+  @Prop({ index: true })
   emailAccount: string;
 
   @Prop()

@@ -18,15 +18,15 @@ These instructions will guide you through setting up and running the application
    cd backend-challenge
    
 3. (Optional) Update CLIENT_ID and CLIENT_SECRET in docker-compose file:
-   Obtain these from microsoft by using this [Guide](https://github.com/Abbasi193/backend-challenge/wiki/Register-application-with-microsoft-azure)
+   Obtain these from microsoft by using this [Guide](https://github.com/Abbasi193/backend-challenge/wiki/Register-application-with-microsoft-azure), temporary credentials already added.
 
 
-3. (Optional) Enable callbacks from microsoft for graph api implementation, not needed for IMAP:
+4. (Optional) Enable callbacks from microsoft for graph api implementation, not needed for IMAP:
    install ngrok from [Ngrok's official website](https://ngrok.com/docs/getting-started/).
    ```bash
    ngrok http 3000
 
-Use forward URL (e.g., http://abcd1234.ngrok.io) as WEBHOOK_URL in the docker-compose file.
+Use forward URL from ngrok (e.g., http://abcd1234.ngrok.io) as WEBHOOK_URL in the docker-compose file.
   
 5. Build and run the Docker containers using Docker Compose:
    ```bash

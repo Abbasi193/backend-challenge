@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install backend dependencies.
-RUN npm install
+RUN npm ci
 
 # Copy the backend application code.
 COPY . .
@@ -23,7 +23,7 @@ WORKDIR /app/client
 COPY ./client/package*.json ./
 
 # Install frontend dependencies.
-RUN npm install
+RUN npm ci
 
 # Build the frontend application.
 RUN npm run build
